@@ -1348,6 +1348,38 @@ function getSettingsContent() {
     `;
 }
 
+const reportPeriodSelect = document.getElementById('reportPeriod');
+if (reportPeriodSelect) {
+    reportPeriodSelect.addEventListener('change', () => {
+        const selectedRange = reportPeriodSelect.value;
+
+        const filtered = filterByReportPeriod(transactions, selectedRange); // ⬅️ filter your transactions
+        renderReportsCharts(filtered); // ⬅️ rerender the charts with new filtered data
+    });
+}
+
+function filterByReportPeriod(transactions, period) {
+    const now = new Date();
+
+    return transactions.filter(t => {
+        const txDate = new Date(t.date);
+        switch (period) {
+            case '30':
+                return (now - txDate) / (1000 * 60 * 60 * 24) <= 30;
+            case 'this-month':
+                return txDate.getMonth() === now.getMonth() && txDate.getFullYear() === now.getFullYear();
+            case 'last-month':
+                const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                return txDate.getMonth() === lastMonth.getMonth() && txDate.getFullYear() === lastMonth.getFullYear();
+            case 'this-year':
+                return txDate.getFullYear() === now.getFullYear();
+            default:
+                return true;
+        }
+    });
+}
+
+
 // Load page content dynamically
 function loadPage(page) {
     showLoader();
@@ -1423,8 +1455,10 @@ function loadPage(page) {
 
         
         if (page === 'reports') {
-            renderReportsCharts(transactions);
+            const filtered = filterByReportPeriod(transactions, '30'); // default
+            renderReportsCharts(filtered);
         }
+        
         
         
     
@@ -1900,6 +1934,9 @@ function renderDashboardCharts(transactions) {
 
 
 function renderReportsCharts(transactions) {
+    if (window.categoryChart) window.categoryChart.destroy();
+if (window.trendChart) window.trendChart.destroy();
+
     if (!window.Chart || !transactions) return;
 
     const sorted = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
