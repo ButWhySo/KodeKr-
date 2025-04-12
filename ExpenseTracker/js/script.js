@@ -101,20 +101,23 @@ function showToast(message, type = 'success', duration = 3000) {
 
 // Format currency
 function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', {
+    const currency = localStorage.getItem('currency') || 'USD';
+    const formatter = new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: 'USD'
-    }).format(amount);
+        currency: currency
+    });
+    return formatter.format(amount);
 }
 
 // Format date
 function formatDate(dateString) {
+    const date = new Date(dateString);
     const options = {
         month: 'short',
         day: 'numeric',
         year: 'numeric'
     };
-    return new Date(dateString).toLocaleDateString('en-US', options);
+    return date.toLocaleDateString('en-US', options);
 }
 
 // Get relative time (e.g., "2 days ago")
@@ -125,8 +128,8 @@ function getRelativeTime(dateString) {
 
     if (diffInDays === 0) return 'Today';
     if (diffInDays === 1) return 'Yesterday';
-    if (diffInDays < 7) return `diffInDays days ago`;
-    if (diffInDays < 30) return `Math.floor(diffInDays / 7) weeks ago`;
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
     return formatDate(dateString);
 }
 
@@ -547,9 +550,6 @@ function getTransactionsContent(transactions = []) {
                     <input type="text" placeholder="Search transactions..." id="searchTransactions">
                 </div>
                 <div class="transaction-actions">
-                    <button class="btn btn-outline">
-                        <i class="fas fa-filter"></i> Filters
-                    </button>
                     <button class="btn btn-primary" id="addTransactionBtn">
                         <i class="fas fa-plus"></i> Add Transaction
                     </button>
@@ -597,7 +597,6 @@ function getTransactionsContent(transactions = []) {
                 </div>
             </div>
 
-            <!-- ✅ PASS transactions to the function -->
             ${generateTransactionList(transactions)}
             
             <div class="pagination">
@@ -1252,7 +1251,6 @@ function renderReportsCharts(transactions) {
 function getSettingsContent() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     const savedCurrency = localStorage.getItem('currency') || 'USD';
-    const savedDateFormat = localStorage.getItem('dateFormat') || 'MM/DD/YYYY';
     
     return `
     <div class="header">
@@ -1291,14 +1289,6 @@ function getSettingsContent() {
                     <option value="EUR" ${savedCurrency === 'EUR' ? 'selected' : ''}>EUR (€)</option>
                     <option value="GBP" ${savedCurrency === 'GBP' ? 'selected' : ''}>GBP (£)</option>
                     <option value="JPY" ${savedCurrency === 'JPY' ? 'selected' : ''}>JPY (¥)</option>
-                </select>
-            </div>
-            <div class="settings-group">
-                <label class="settings-label">Date Format</label>
-                <select id="dateFormatSelect" class="form-control form-select">
-                    <option value="MM/DD/YYYY" ${savedDateFormat === 'MM/DD/YYYY' ? 'selected' : ''}>MM/DD/YYYY</option>
-                    <option value="DD/MM/YYYY" ${savedDateFormat === 'DD/MM/YYYY' ? 'selected' : ''}>DD/MM/YYYY</option>
-                    <option value="YYYY-MM-DD" ${savedDateFormat === 'YYYY-MM-DD' ? 'selected' : ''}>YYYY-MM-DD</option>
                 </select>
             </div>
         </div>
@@ -1784,6 +1774,26 @@ if (filterType && filterCategory && filterDateRange) {
     if (searchInput) {
         searchInput.addEventListener('input', handleSearch);
     }
+
+    // Add settings events setup
+    if (currentPage === 'settings') {
+        setupSettingsEvents();
+    }
+
+    // Report period select
+    const reportPeriodSelect = document.getElementById('reportPeriod');
+    if (reportPeriodSelect) {
+        reportPeriodSelect.addEventListener('change', () => {
+            const selectedRange = reportPeriodSelect.value;
+            const currentUser = localStorage.getItem('loggedInUser');
+            const users = JSON.parse(localStorage.getItem('users') || '{}');
+            const transactions = users[currentUser]?.transactions || [];
+            
+            const filtered = filterByReportPeriod(transactions, selectedRange);
+            renderReportsCharts(filtered);
+            showToast(`Report period changed to ${selectedRange}`, 'success');
+        });
+    }
 }
 
 // 🔍 Live search transactions by any parameter
@@ -1927,72 +1937,120 @@ function renderDashboardCharts(transactions) {
 
 function renderReportsCharts(transactions) {
     if (window.categoryChart) window.categoryChart.destroy();
-if (window.trendChart) window.trendChart.destroy();
+    if (window.trendChart) window.trendChart.destroy();
 
     if (!window.Chart || !transactions) return;
 
+    // Sort transactions by date
     const sorted = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Calculate running balance
+    let balance = 0;
     const dateLabels = [];
     const balanceData = [];
     const categoryTotals = {};
-    let balance = 0;
 
     sorted.forEach(tx => {
-        const dateStr = new Date(tx.date).toLocaleDateString();
-        if (!dateLabels.includes(dateStr)) {
-            dateLabels.push(dateStr);
-        }
+        // Update balance
+        balance += tx.type === 'income' ? tx.amount : -tx.amount;
+        
+        // Add date and balance to arrays
+        dateLabels.push(formatDate(tx.date));
+        balanceData.push(balance);
 
-        if (tx.type === 'income') balance += tx.amount;
-        else {
-            balance -= tx.amount;
+        // Update category totals for expenses
+        if (tx.type === 'expense') {
             categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
         }
-        balanceData.push(balance);
     });
 
+    // Balance Trend Chart
     const balanceCtx = document.getElementById('balanceTrendChart')?.getContext('2d');
     if (balanceCtx) {
-        new Chart(balanceCtx, {
+        window.trendChart = new Chart(balanceCtx, {
             type: 'line',
             data: {
                 labels: dateLabels,
                 datasets: [{
                     label: 'Net Balance',
                     data: balanceData,
+                    borderColor: '#4e73df',
+                    backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                    fill: true,
                     borderWidth: 2,
-                    borderColor: '#4BC0C0',
-                    fill: false,
-                    tension: 0.3
+                    pointRadius: 3,
+                    pointBackgroundColor: '#4e73df',
+                    tension: 0.1
                 }]
             },
             options: {
                 responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return `Balance: ${formatCurrency(context.raw)}`;
+                            }
+                        }
+                    }
+                },
                 scales: {
-                    y: { beginAtZero: false }
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: (value) => formatCurrency(value)
+                        }
+                    }
                 }
             }
         });
     }
 
+    // Category Pie Chart
     const categoryCtx = document.getElementById('categoryPieChart')?.getContext('2d');
     if (categoryCtx) {
-        new Chart(categoryCtx, {
+        window.categoryChart = new Chart(categoryCtx, {
             type: 'doughnut',
             data: {
                 labels: Object.keys(categoryTotals),
                 datasets: [{
                     data: Object.values(categoryTotals),
                     backgroundColor: [
-                        '#FF6384', '#36A2EB', '#FFCE56', '#9966FF', '#4BC0C0', '#FF9F40'
-                    ]
+                        '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', 
+                        '#e74a3b', '#858796', '#5a5c69', '#3a3b45'
+                    ],
+                    hoverBackgroundColor: [
+                        '#2e59d9', '#17a673', '#2c9faf', '#dda20a', 
+                        '#be2617', '#656776', '#42444e', '#24252e'
+                    ],
+                    hoverBorderColor: "rgba(234, 236, 244, 1)",
                 }]
             },
             options: {
                 responsive: true,
                 plugins: {
-                    legend: { position: 'right' }
-                }
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const value = context.raw;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${context.label}: ${formatCurrency(value)} (${percentage}%)`;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    }
+                },
+                cutout: '70%'
             }
         });
     }
@@ -2246,4 +2304,229 @@ function getDashboardContent(filteredTransactions) {
             <i class="fas fa-plus"></i>
         </button>
     `;
+}
+
+function calculateFinancialStats(transactions) {
+    const expenses = transactions.filter(t => t.type === 'expense').map(t => t.amount);
+    const incomes = transactions.filter(t => t.type === 'income').map(t => t.amount);
+
+    const calculateStats = (values) => {
+        if (values.length === 0) return { mean: 0, stdDev: 0, min: 0, max: 0 };
+        const mean = values.reduce((a, b) => a + b, 0) / values.length;
+        const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+        const stdDev = Math.sqrt(variance);
+        return {
+            mean,
+            stdDev,
+            min: Math.min(...values),
+            max: Math.max(...values)
+        };
+    };
+
+    return {
+        expenses: calculateStats(expenses),
+        incomes: calculateStats(incomes)
+    };
+}
+
+function getReportsContent(transactions = []) {
+    const stats = calculateFinancialStats(transactions);
+    
+    return `
+        <div class="header">
+            <h1 class="page-title">Reports</h1>
+            <div class="header-actions">
+                <select class="form-control" id="reportPeriod">
+                    <option value="30">Last 30 Days</option>
+                    <option value="this-month">This Month</option>
+                    <option value="last-month">Last Month</option>
+                    <option value="this-year">This Year</option>
+                    <option value="all">All Time</option>
+                </select>
+                <button class="btn btn-outline">
+                    <i class="fas fa-download"></i> Export
+                </button>
+            </div>
+        </div>
+
+        <div class="reports-container">
+            <div class="chart-section">
+                <h3>Balance Over Time</h3>
+                <canvas id="balanceTrendChart" height="100"></canvas>
+
+                <h3 style="margin-top: 2rem;">Expenses by Category</h3>
+                <div style="width: 50%; margin: 0 auto;">
+                    <canvas id="categoryPieChart" height="100"></canvas>
+                </div>
+            </div>
+
+            <div class="statistics-section">
+                <div class="stat-card">
+                    <h3>Income Statistics</h3>
+                    <div class="stat-item">
+                        <span>Average Income:</span>
+                        <span>${formatCurrency(stats.incomes.mean)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Standard Deviation:</span>
+                        <span>${formatCurrency(stats.incomes.stdDev)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Range:</span>
+                        <span>${formatCurrency(stats.incomes.min)} - ${formatCurrency(stats.incomes.max)}</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Expense Statistics</h3>
+                    <div class="stat-item">
+                        <span>Average Expense:</span>
+                        <span>${formatCurrency(stats.expenses.mean)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Standard Deviation:</span>
+                        <span>${formatCurrency(stats.expenses.stdDev)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Range:</span>
+                        <span>${formatCurrency(stats.expenses.min)} - ${formatCurrency(stats.expenses.max)}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Settings event handlers
+function setupSettingsEvents() {
+    // Theme radio buttons
+    const themeRadios = document.querySelectorAll('input[name="theme"]');
+    themeRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const theme = e.target.value;
+            document.body.classList.toggle('dark-mode', theme === 'dark');
+            localStorage.setItem('theme', theme);
+            showToast(`Theme changed to ${theme} mode`, 'success');
+        });
+    });
+
+    // Currency select
+    const currencySelect = document.getElementById('currencySelect');
+    if (currencySelect) {
+        currencySelect.addEventListener('change', (e) => {
+            const currency = e.target.value;
+            localStorage.setItem('currency', currency);
+            showToast(`Currency changed to ${currency}`, 'success');
+            // Refresh the current page to update currency display
+            loadPage(currentPage);
+        });
+    }
+
+    // Export data button
+    const exportDataBtn = document.getElementById('exportDataBtn');
+    if (exportDataBtn) {
+        exportDataBtn.addEventListener('click', () => {
+            const currentUser = localStorage.getItem('loggedInUser');
+            const users = JSON.parse(localStorage.getItem('users') || '{}');
+            const userData = users[currentUser] || {};
+            
+            const exportData = {
+                transactions: userData.transactions || [],
+                budgets: JSON.parse(localStorage.getItem(`${currentUser}_budgets`) || '[]'),
+                goals: JSON.parse(localStorage.getItem(`${currentUser}_goals`) || '[]'),
+                settings: {
+                    theme: localStorage.getItem('theme'),
+                    currency: localStorage.getItem('currency')
+                }
+            };
+
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `expense-tracker-data-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            showToast('Data exported successfully', 'success');
+        });
+    }
+
+    // Import data button
+    const importDataBtn = document.getElementById('importDataBtn');
+    if (importDataBtn) {
+        importDataBtn.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = (event) => {
+                    try {
+                        const importedData = JSON.parse(event.target.result);
+                        const currentUser = localStorage.getItem('loggedInUser');
+                        
+                        // Update user data
+                        const users = JSON.parse(localStorage.getItem('users') || '{}');
+                        users[currentUser] = {
+                            ...users[currentUser],
+                            transactions: importedData.transactions || []
+                        };
+                        localStorage.setItem('users', JSON.stringify(users));
+                        
+                        // Update budgets and goals
+                        localStorage.setItem(`${currentUser}_budgets`, JSON.stringify(importedData.budgets || []));
+                        localStorage.setItem(`${currentUser}_goals`, JSON.stringify(importedData.goals || []));
+                        
+                        // Update settings
+                        if (importedData.settings) {
+                            Object.entries(importedData.settings).forEach(([key, value]) => {
+                                localStorage.setItem(key, value);   
+                            });
+                        }
+                        
+                        showToast('Data imported successfully', 'success');
+                        // Refresh the current page to update displays
+                        loadPage(currentPage);
+                    } catch (error) {
+                        showToast('Error importing data: Invalid file format', 'error');
+                    }
+                };
+                
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        });
+    }
+
+    // Clear data button
+    const clearDataBtn = document.getElementById('clearDataBtn');
+    if (clearDataBtn) {
+        clearDataBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                const currentUser = localStorage.getItem('loggedInUser');
+                
+                // Clear user-specific data
+                const users = JSON.parse(localStorage.getItem('users') || '{}');
+                users[currentUser] = {
+                    ...users[currentUser],
+                    transactions: []
+                };
+                localStorage.setItem('users', JSON.stringify(users));
+                localStorage.removeItem(`${currentUser}_budgets`);
+                localStorage.removeItem(`${currentUser}_goals`);
+                
+                showToast('All data cleared successfully', 'success');
+                loadPage(currentPage);
+            }
+        });
+    }
 }
