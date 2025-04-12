@@ -792,7 +792,7 @@ function getReportsContent() {
                     <canvas id="balanceTrendChart" height="300"></canvas>
                 </div>
                 <div class="chart-card">
-                    <h3>Income vs Expenses</h3>
+                    
                     <canvas id="incomeExpenseChart" height="300"></canvas>
                 </div>
             </div>
@@ -800,7 +800,7 @@ function getReportsContent() {
 
             <!-- Chart Section -->
 <div class="chart-section">
-    <h3>Balance Over Time</h3>
+    
     <canvas id="balanceTrendChart" height="100"></canvas>
 
     <h3 style="margin-top: 2rem;">Expenses by Category</h3>
