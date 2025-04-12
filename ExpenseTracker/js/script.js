@@ -1,3 +1,4 @@
+
 if (!localStorage.getItem('loggedInUser')) {
     window.location.href = 'login.html';
 }
@@ -17,7 +18,6 @@ const cancelTransactionBtn = document.getElementById('cancelTransactionBtn');
 const saveTransactionBtn = document.getElementById('saveTransactionBtn');
 const transactionForm = document.getElementById('transactionForm');
 let currentUser = localStorage.getItem('loggedInUser') || '';
-let editTransactionId = null; // To track if we're editing an existing transaction
 
 // Current active page
 let currentPage = 'dashboard';
@@ -412,9 +412,14 @@ function getTransactionsContent(transactions = []) {
                     <i class="fas fa-search"></i>
                     <input type="text" placeholder="Search transactions..." id="searchTransactions">
                 </div>
-                
-                
-                
+                <div class="transaction-actions">
+                    <button class="btn btn-outline">
+                        <i class="fas fa-filter"></i> Filters
+                    </button>
+                    <button class="btn btn-primary" id="addTransactionBtn">
+                        <i class="fas fa-plus"></i> Add Transaction
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -422,7 +427,9 @@ function getTransactionsContent(transactions = []) {
             <div class="transactions-header">
                 <h2 class="section-title">All Transactions</h2>
                 <div class="transaction-actions">
-                    
+                    <button class="btn btn-outline">
+                        <i class="fas fa-download"></i> Export
+                    </button>
                 </div>
             </div>
             
@@ -584,7 +591,9 @@ function getGoalsContent() {
             <div class="section-header">
                 <h2 class="section-title">My Savings Goals</h2>
                 <div class="goal-actions">
-                
+                    <button class="btn btn-outline">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
                 </div>
             </div>
             
@@ -671,7 +680,6 @@ function getGoalsContent() {
 }
 
 // Reports content
-/*
 function getReportsContent() {
     return `
         <div class="header">
@@ -750,467 +758,6 @@ function getReportsContent() {
         </div>
     `;
 }
-*/
-function getReportsContent() {
-    return `
-        <div class="header">
-            <h1 class="page-title">Reports</h1>
-            <div class="header-actions">
-                <button class="btn btn-outline">
-                    <i class="fas fa-download"></i> Export
-                </button>
-                <button class="btn btn-primary">
-                    <i class="fas fa-calendar"></i> Custom Range
-                </button>
-            </div>
-        </div>
-
-        <div class="reports-container">
-            <div class="report-tabs">
-                <button class="report-tab active" data-tab="spending">Spending</button>
-                <button class="report-tab" data-tab="income">Income</button>
-                <button class="report-tab" data-tab="categories">Categories</button>
-                <button class="report-tab" data-tab="trends">Trends</button>
-            </div>
-            
-            <div class="report-content">
-                <div class="report-header">
-                    <h2>Spending Report</h2>
-                    <select class="form-control" id="reportPeriod">
-                        <option value="30">Last 30 Days</option>
-                        <option value="this-month">This Month</option>
-                        <option value="last-month">Last Month</option>
-                        <option value="this-year">This Year</option>
-                    </select>
-                </div>
-                
-                <!-- 🚀 Chart Area -->
-                <div class="chart-section">
-                    <h3>Spending by Category</h3>
-                    <canvas id="categoryChart" height="100"></canvas>
-
-                    <h3 style="margin-top: 2rem;">Spending Over Time</h3>
-                    <canvas id="trendChart" height="100"></canvas>
-                </div>
-
-                <!-- You can keep summary/details below -->
-                <div class="report-details">
-                    <div class="report-summary">
-                        <h3>Summary</h3>
-                        <div class="summary-item">
-                            <span>Total Spending</span>
-                            <span>${formatCurrency(1920.50)}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span>Average Daily</span>
-                            <span>${formatCurrency(64.02)}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span>Transactions</span>
-                            <span>42</span>
-                        </div>
-                    </div>
-                    
-                    <div class="report-categories">
-                        <h3>Top Categories</h3>
-                        <div class="category-item">
-                            <span>Food & Dining</span>
-                            <span>${formatCurrency(625.30)} (32.5%)</span>
-                        </div>
-                        <div class="category-item">
-                            <span>Shopping</span>
-                            <span>${formatCurrency(420.75)} (21.9%)</span>
-                        </div>
-                        <div class="category-item">
-                            <span>Bills</span>
-                            <span>${formatCurrency(375.50)} (19.5%)</span>
-                        </div>
-                        <div class="category-item">
-                            <span>Transportation</span>
-                            <span>${formatCurrency(210.00)} (10.9%)</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderReportsCharts(transactions) {
-    const categoryTotals = {};
-    const dailyTotals = {};
-
-    transactions.forEach(tx => {
-        if (tx.type === 'expense') {
-            const dateKey = new Date(tx.date).toISOString().split('T')[0];
-            categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
-            dailyTotals[dateKey] = (dailyTotals[dateKey] || 0) + tx.amount;
-        }
-    });
-
-    const categoryLabels = Object.keys(categoryTotals);
-    const categoryData = Object.values(categoryTotals);
-
-    const trendLabels = Object.keys(dailyTotals).sort();
-    const trendData = trendLabels.map(date => dailyTotals[date]);
-
-    // Doughnut Chart
-    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
-    new Chart(categoryCtx, {
-        type: 'doughnut',
-        data: {
-            labels: categoryLabels,
-            datasets: [{
-                data: categoryData,
-                backgroundColor: [
-                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'right'
-                }
-            }
-        }
-    });
-
-    // Line Chart
-    const trendCtx = document.getElementById('trendChart').getContext('2d');
-    new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: trendLabels,
-            datasets: [{
-                label: 'Daily Spending',
-                data: trendData,
-                fill: false,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
-
-/*
-function renderReportsCharts(transactions) {
-    // Group by category
-    const categoryTotals = {};
-    const dailyTotals = {};
-
-    transactions.forEach(tx => {
-        if (tx.type === 'expense') {
-            // For doughnut chart
-            categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
-
-            // For line chart (by date)
-            const dateKey = new Date(tx.date).toISOString().split('T')[0];
-            dailyTotals[dateKey] = (dailyTotals[dateKey] || 0) + tx.amount;
-        }
-    });
-
-    const categoryLabels = Object.keys(categoryTotals);
-    const categoryData = Object.values(categoryTotals);
-
-    const trendLabels = Object.keys(dailyTotals).sort(); // dates
-    const trendData = trendLabels.map(date => dailyTotals[date]);
-
-    // 🥯 Doughnut Chart - Spending by Category
-    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
-    new Chart(categoryCtx, {
-        type: 'doughnut',
-        data: {
-            labels: categoryLabels,
-            datasets: [{
-                data: categoryData,
-                backgroundColor: [
-                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'right'
-                }
-            }
-        }
-    });
-
-    // 📈 Line Chart - Spending Over Time
-    const trendCtx = document.getElementById('trendChart').getContext('2d');
-    new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: trendLabels,
-            datasets: [{
-                label: 'Daily Spending',
-                data: trendData,
-                fill: false,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
-*/
-/*
-function renderReportsCharts() {
-    const currentUser = localStorage.getItem('loggedInUser');
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    const transactions = users[currentUser]?.transactions || [];
-
-    // Group by category
-    const categoryTotals = {};
-    const dailyTotals = {};
-
-    transactions.forEach(tx => {
-        if (tx.type === 'expense') {
-            // Doughnut chart data
-            categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
-
-            // Line chart data
-            const dateKey = new Date(tx.date).toISOString().split('T')[0];
-            dailyTotals[dateKey] = (dailyTotals[dateKey] || 0) + tx.amount;
-        }
-    });
-
-    const categoryLabels = Object.keys(categoryTotals);
-    const categoryData = Object.values(categoryTotals);
-
-    const trendLabels = Object.keys(dailyTotals).sort();
-    const trendData = trendLabels.map(date => dailyTotals[date]);
-
-    // 🥯 Doughnut Chart - Spending by Category
-    const categoryCtx = document.getElementById('categoryChart')?.getContext('2d');
-    if (categoryCtx) {
-        new Chart(categoryCtx, {
-            type: 'doughnut',
-            data: {
-                labels: categoryLabels,
-                datasets: [{
-                    data: categoryData,
-                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'right'
-                    }
-                }
-            }
-        });
-    }
-
-    // 📈 Line Chart - Spending Over Time
-    const trendCtx = document.getElementById('trendChart')?.getContext('2d');
-    if (trendCtx) {
-        new Chart(trendCtx, {
-            type: 'line',
-            data: {
-                labels: trendLabels,
-                datasets: [{
-                    label: 'Daily Spending',
-                    data: trendData,
-                    borderColor: '#36A2EB',
-                    fill: false,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-    }
-}
-*/
-/*
-function renderReportsCharts() {
-    const currentUser = localStorage.getItem('loggedInUser');
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    const userTransactions = users[currentUser]?.transactions || [];
-
-    // Proceed only if we have valid data
-    if (!userTransactions.length) {
-        showToast('No transaction data available to render charts.', 'error');
-        return;
-    }
-
-    // Group by category and date
-    const categoryTotals = {};
-    const dailyTotals = {};
-
-    userTransactions.forEach(tx => {
-        if (tx.type === 'expense') {
-            categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
-
-            const dateKey = new Date(tx.date).toISOString().split('T')[0];
-            dailyTotals[dateKey] = (dailyTotals[dateKey] || 0) + tx.amount;
-        }
-    });
-
-    const categoryLabels = Object.keys(categoryTotals);
-    const categoryData = Object.values(categoryTotals);
-
-    const trendLabels = Object.keys(dailyTotals).sort();
-    const trendData = trendLabels.map(date => dailyTotals[date]);
-
-    // Doughnut chart
-    const categoryCtx = document.getElementById('categoryChart')?.getContext('2d');
-    if (categoryCtx) {
-        new Chart(categoryCtx, {
-            type: 'doughnut',
-            data: {
-                labels: categoryLabels,
-                datasets: [{
-                    data: categoryData,
-                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'right' }
-                }
-            }
-        });
-    }
-
-    // Line chart
-    const trendCtx = document.getElementById('trendChart')?.getContext('2d');
-    if (trendCtx) {
-        new Chart(trendCtx, {
-            type: 'line',
-            data: {
-                labels: trendLabels,
-                datasets: [{
-                    label: 'Spending Over Time',
-                    data: trendData,
-                    borderColor: '#36A2EB',
-                    fill: false,
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
-        });
-    }
-}
-*/
-function getReportsContent(transactions) {
-    const expenses = transactions.filter(tx => tx.type === 'expense');
-    const totalSpending = expenses.reduce((sum, tx) => sum + tx.amount, 0);
-    const avgDaily = totalSpending / 30; // Defaulting to last 30 days
-    const transactionCount = expenses.length;
-
-    const categoryTotals = {};
-    expenses.forEach(tx => {
-        categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
-    });
-
-    const topCategoriesHTML = Object.entries(categoryTotals)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 4)
-        .map(([category, amount]) => {
-            const percent = ((amount / totalSpending) * 100).toFixed(1);
-            return `<div class="category-item">
-                        <span>${category.charAt(0).toUpperCase() + category.slice(1)}</span>
-                        <span>${formatCurrency(amount)} (${percent}%)</span>
-                    </div>`;
-        }).join('');
-
-    return `
-        <div class="header">
-            <h1 class="page-title">Reports</h1>
-            <div class="header-actions">
-                <button class="btn btn-outline"><i class="fas fa-download"></i> Export</button>
-                <button class="btn btn-primary"><i class="fas fa-calendar"></i> Custom Range</button>
-            </div>
-        </div>
-
-        <div class="reports-container">
-            <div class="report-tabs">
-                <button class="report-tab active" data-tab="spending">Spending</button>
-                <button class="report-tab" data-tab="income">Income</button>
-                <button class="report-tab" data-tab="categories">Categories</button>
-                <button class="report-tab" data-tab="trends">Trends</button>
-            </div>
-
-            <div class="report-content">
-                <div class="report-header">
-                    <h2>Spending Report</h2>
-                    <select class="form-control" id="reportPeriod">
-                        <option value="30">Last 30 Days</option>
-                        <option value="this-month">This Month</option>
-                        <option value="last-month">Last Month</option>
-                        <option value="this-year">This Year</option>
-                    </select>
-                </div>
-
-                <div class="chart-section">
-                    <h3>Spending by Category</h3>
-                    <canvas id="categoryChart" height="100"></canvas>
-
-                    <h3 style="margin-top: 2rem;">Spending Over Time</h3>
-                    <canvas id="trendChart" height="100"></canvas>
-                </div>
-
-                <div class="report-details">
-                    <div class="report-summary">
-                        <h3>Summary</h3>
-                        <div class="summary-item">
-                            <span>Total Spending</span>
-                            <span>${formatCurrency(totalSpending)}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span>Average Daily</span>
-                            <span>${formatCurrency(avgDaily)}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span>Transactions</span>
-                            <span>${transactionCount}</span>
-                        </div>
-                    </div>
-
-                    <div class="report-categories">
-                        <h3>Top Categories</h3>
-                        ${topCategoriesHTML}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-
 
 // Settings content
 function getSettingsContent() {
@@ -1292,8 +839,6 @@ function getSettingsContent() {
 }
 
 // Load page content dynamically
-
-/*
 function loadPage(page) {
     showLoader();
     currentPage = page;
@@ -1345,7 +890,7 @@ function loadPage(page) {
                 content = getGoalsContent();
                 break;
             case 'reports':
-                content = getReportsContent(transactions);
+                content = getReportsContent();
                 break;
             case 'settings':
                 content = getSettingsContent();
@@ -1354,17 +899,7 @@ function loadPage(page) {
                 content = getDashboardContent(transactions);
         }
 
-        
         mainContent.innerHTML = content;
-
-// 🟩 ADD THIS HERE
-if (page === 'reports') {
-    renderReportsCharts(transactions);
-}
-
-hideLoader();
-setupPageEvents(); // Setup event listeners for the new content
-
         hideLoader();
         setupPageEvents(); // Setup event listeners for the new content
     }, 500);
@@ -1378,86 +913,6 @@ setupPageEvents(); // Setup event listeners for the new content
         });
     }
 }
-*/
-
-function loadPage(page) {
-    showLoader();
-    currentPage = page;
-
-    const currentUser = localStorage.getItem('loggedInUser');
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    const userData = users[currentUser] || {};
-    const transactions = userData.transactions || [];
-
-    navLinks.forEach(link => {
-        link.classList.remove('active');
-        if (link.dataset.page === page) {
-            link.classList.add('active');
-        }
-    });
-
-    const pageTitle = document.querySelector('.page-title');
-    if (pageTitle) {
-        pageTitle.textContent = page.charAt(0).toUpperCase() + page.slice(1);
-    }
-
-    const themeToggle = document.getElementById("themeToggleBtn");
-    if (themeToggle) {
-        themeToggle.addEventListener("click", () => {
-            document.body.classList.toggle("dark-mode");
-            const isDark = document.body.classList.contains("dark-mode");
-            localStorage.setItem("theme", isDark ? "dark" : "light");
-        });
-    }
-
-    setTimeout(() => {
-        let content = '';
-
-        switch (page) {
-            case 'dashboard':
-                content = getDashboardContent(transactions);
-                break;
-            case 'transactions':
-                content = getTransactionsContent(transactions);
-                break;
-            case 'budgets':
-                content = getBudgetsContent(transactions);
-                break;
-            case 'goals':
-                content = getGoalsContent();
-                break;
-            case 'reports':
-                content = getReportsContent(transactions);
-                break;
-            case 'settings':
-                content = getSettingsContent();
-                break;
-            default:
-                content = getDashboardContent(transactions);
-        }
-
-        mainContent.innerHTML = content;
-
-        // ✅ Chart render AFTER content is placed
-        if (page === 'reports') {
-            setTimeout(() => renderReportsCharts(transactions), 100);
-        }
-
-        setupPageEvents(); // Re-attach event listeners
-        hideLoader();
-    }, 500);
-
-    const logoutUser = document.getElementById('logoutUser');
-    if (logoutUser) {
-        logoutUser.addEventListener('click', (e) => {
-            e.preventDefault();
-            localStorage.removeItem('loggedInUser');
-            window.location.href = 'index.html';
-        });
-    }
-}
-
-
 
 // Setup modal events
 function setupModalEvents() {
@@ -1519,589 +974,309 @@ function setupModalEvents() {
 }
 
 // Setup event listeners for the current page
-/*
 function setupPageEvents() {
+    // Navigation links
     const openSettings = document.getElementById('openSettings');
-    if (openSettings) {
-        openSettings.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('settings');
-        });
-    }
+if (openSettings) {
+    openSettings.addEventListener('click', (e) => {
+        e.preventDefault();
+        loadPage('settings'); // assuming 'settings' triggers the settings page render
+    });
 
     const logoutUser = document.getElementById('logoutUser');
-    if (logoutUser) {
-        logoutUser.addEventListener('click', (e) => {
-            e.preventDefault();
-            localStorage.removeItem('loggedInUser');
-            window.location.href = 'index.html';
-        });
-    }
+if (logoutUser) {
+    logoutUser.addEventListener('click', (e) => {
+        e.preventDefault();
+        localStorage.removeItem('loggedInUser');
+        window.location.href = 'index.html';
+    });
+}
+
+}
 
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const page = link.dataset.page;
-            if (page !== currentPage) loadPage(page);
+            if (page !== currentPage) {
+                loadPage(page);
+            }
         });
     });
 
-    const openTransactionModal = () => {
-        transactionForm.reset();
-        document.getElementById('transactionDate').valueAsDate = new Date();
-        document.getElementById('saveTransactionBtn').textContent = 'Add Transaction';
-        editTransactionId = null;
-        transactionModal.classList.add('active');
-    };
-
+    // Add transaction button (if exists on this page)
     const addTransactionBtn = document.getElementById('addTransactionBtn');
     if (addTransactionBtn) {
-        addTransactionBtn.addEventListener('click', openTransactionModal);
+        addTransactionBtn.addEventListener('click', () => {
+            // Reset form and set default date
+            transactionForm.reset();
+            document.getElementById('transactionDate').valueAsDate = new Date();
+
+            // Show modal
+            transactionModal.classList.add('active');
+        });
     }
 
+    // Add first transaction button (empty state)
     const addFirstTransactionBtn = document.getElementById('addFirstTransactionBtn');
     if (addFirstTransactionBtn) {
-        addFirstTransactionBtn.addEventListener('click', openTransactionModal);
+        addFirstTransactionBtn.addEventListener('click', () => {
+            // Reset form and set default date
+            transactionForm.reset();
+            document.getElementById('transactionDate').valueAsDate = new Date();
+
+            // Show modal
+            transactionModal.classList.add('active');
+        });
     }
 
+    // Add budget button (if exists on this page)
+    const addBudgetBtn = document.getElementById('addBudgetBtn');
+    if (addBudgetBtn) {
+        addBudgetBtn.addEventListener('click', () => {
+            showToast('Add budget modal would open here', 'success');
+        });
+    }
+
+    // Add another budget button
+    const addAnotherBudgetBtn = document.getElementById('addAnotherBudgetBtn');
+    if (addAnotherBudgetBtn) {
+        addAnotherBudgetBtn.addEventListener('click', () => {
+            showToast('Add budget modal would open here', 'success');
+        });
+    }
+
+    // Add goal button (if exists on this page)
+    const addGoalBtn = document.getElementById('addGoalBtn');
+    if (addGoalBtn) {
+        addGoalBtn.addEventListener('click', () => {
+            showToast('Add goal modal would open here', 'success');
+        });
+    }
+
+    // Add first goal button (empty state)
+    const addFirstGoalBtn = document.getElementById('addFirstGoalBtn');
+    if (addFirstGoalBtn) {
+        addFirstGoalBtn.addEventListener('click', () => {
+            showToast('Add goal modal would open here', 'success');
+        });
+    }
+
+    // Goal menu buttons
+    for (let i = 1; i <= 3; i++) {
+        const goalMenuBtn = document.getElementById(`goalMenuBtn${i}`);
+        if (goalMenuBtn) {
+            goalMenuBtn.addEventListener('click', () => {
+                showToast(`Goal menu for goal ${i} would open here`, 'success');
+            });
+        }
+    }
+
+
+    
+
+    // Transaction edit/delete buttons
     document.querySelectorAll('.transaction-item .action-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const transactionId = btn.closest('.transaction-item').dataset.id;
 
             if (btn.classList.contains('edit')) {
+                // Find transaction
                 const transaction = transactions.find(t => t.id == transactionId);
+
                 if (transaction) {
-                    editTransactionId = transaction.id;
+                    // Fill form with transaction data
                     document.getElementById('transactionName').value = transaction.name;
                     document.getElementById('transactionAmount').value = transaction.amount;
                     document.querySelector(`input[name="transactionType"][value="${transaction.type}"]`).checked = true;
                     document.getElementById('transactionCategory').value = transaction.category;
                     document.getElementById('transactionDate').value = transaction.date;
                     document.getElementById('transactionNotes').value = transaction.notes || '';
+
+                    // Change save button text
                     document.getElementById('saveTransactionBtn').textContent = 'Update Transaction';
+
+                    // Show modal
                     transactionModal.classList.add('active');
                 }
             } else if (btn.classList.contains('delete')) {
                 if (confirm('Are you sure you want to delete this transaction?')) {
+                    // Remove transaction from array
                     transactions = transactions.filter(t => t.id != transactionId);
-                    users[currentUser].transactions = transactions;
-                    localStorage.setItem('users', JSON.stringify(users));
+
+                    // Reload current page
                     loadPage(currentPage);
+
+                    // Show success message
                     showToast('Transaction deleted successfully!', 'success');
                 }
             }
         });
     });
 
-    transactionForm.onsubmit = function (e) {
-        e.preventDefault();
+    // Transaction item click
+    document.querySelectorAll('.transaction-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const transactionId = item.dataset.id;
+            showToast(`Viewing details for transaction #${transactionId}`, 'success');
+        });
+    });
 
-        const name = document.getElementById('transactionName').value;
-        const amount = parseFloat(document.getElementById('transactionAmount').value);
-        const type = document.querySelector('input[name="transactionType"]:checked').value;
-        const category = document.getElementById('transactionCategory').value;
-        const date = document.getElementById('transactionDate').value;
-        const notes = document.getElementById('transactionNotes').value;
+    // Settings tabs
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            showToast(`Switched to ${tab.textContent} settings`, 'success');
+        });
+    });
 
-        if (!name || isNaN(amount) || !type || !category || !date) {
-            showToast('Please fill all required fields', 'error');
-            return;
-        }
+    // Report tabs
+    document.querySelectorAll('.report-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            showToast(`Switched to ${tab.textContent} report`, 'success');
+        });
+    });
 
-        if (editTransactionId !== null) {
-            transactions = transactions.filter(t => t.id !== editTransactionId);
-        }
+    const filterType = document.getElementById('filterType');
+const filterCategory = document.getElementById('filterCategory');
+const filterDateRange = document.getElementById('filterDateRange');
 
-        const newTransaction = {
-            id: Date.now(),
-            name,
-            amount,
-            type,
-            category,
-            date,
-            notes
-        };
+if (filterType && filterCategory && filterDateRange) {
+    [filterType, filterCategory, filterDateRange].forEach(filter => {
+        filter.addEventListener('change', () => {
+            const type = filterType.value;
+            const category = filterCategory.value;
+            const dateRange = filterDateRange.value;
 
-        transactions.unshift(newTransaction);
-        users[currentUser].transactions = transactions;
-        localStorage.setItem('users', JSON.stringify(users));
+            const currentUser = localStorage.getItem('loggedInUser');
+            const users = JSON.parse(localStorage.getItem('users') || '{}');
+            const transactions = users[currentUser]?.transactions || [];
 
-        transactionModal.classList.remove('active');
-        transactionForm.reset();
-        loadPage(currentPage);
-        showToast(editTransactionId ? 'Transaction updated!' : 'Transaction added!', 'success');
-        editTransactionId = null;
-    };
+            const now = new Date();
+
+            const filtered = transactions.filter(t => {
+                const matchType = type === 'all' || t.type === type;
+                const matchCategory = category === 'all' || t.category === category;
+
+                let matchDate = true;
+                const tDate = new Date(t.date);
+
+                switch (dateRange) {
+                    case '30':
+                        matchDate = (now - tDate) / (1000 * 60 * 60 * 24) <= 30;
+                        break;
+                    case 'this-month':
+                        matchDate = tDate.getMonth() === now.getMonth() &&
+                                    tDate.getFullYear() === now.getFullYear();
+                        break;
+                    case 'last-month':
+                        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                        matchDate = tDate.getMonth() === lastMonth.getMonth() &&
+                                    tDate.getFullYear() === lastMonth.getFullYear();
+                        break;
+                }
+
+                return matchType && matchCategory && matchDate;
+            });
+
+            // ✅ re-render only with filtered
+            mainContent.innerHTML = getTransactionsContent(filtered);
+
+            // 👇 Restore selected filter values
+            setTimeout(() => {
+                document.getElementById('filterType').value = type;
+                document.getElementById('filterCategory').value = category;
+                document.getElementById('filterDateRange').value = dateRange;
+            }, 0);
+
+            setupPageEvents(); // necessary after innerHTML replacement
+        });
+    });
 }
-*/
-/*
-function setupPageEvents() {
-    // Settings navigation
-    const openSettings = document.getElementById('openSettings');
-    if (openSettings) {
-        openSettings.addEventListener('click', (e) => {
+
+    
+    
+
+
+    // Pagination buttons
+    const prevPageBtn = document.getElementById('prevPageBtn');
+    const nextPageBtn = document.getElementById('nextPageBtn');
+
+    if (prevPageBtn) {
+        prevPageBtn.addEventListener('click', () => {
+            showToast('Loading previous page...', 'success');
+        });
+    }
+
+    if (nextPageBtn) {
+        nextPageBtn.addEventListener('click', () => {
+            showToast('Loading next page...', 'success');
+        });
+    }
+
+    // Settings form
+    const accountSettingsForm = document.getElementById('accountSettingsForm');
+    if (accountSettingsForm) {
+        accountSettingsForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            loadPage('settings');
+            showToast('Account settings saved!', 'success');
         });
     }
 
-    // Logout functionality
-    const logoutUser = document.getElementById('logoutUser');
-    if (logoutUser) {
-        logoutUser.addEventListener('click', (e) => {
-            e.preventDefault();
-            localStorage.removeItem('loggedInUser');
-            window.location.href = 'index.html';
+    // Cancel settings button
+    const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
+    if (cancelSettingsBtn) {
+        cancelSettingsBtn.addEventListener('click', () => {
+            showToast('Changes discarded', 'error');
         });
     }
 
-    // Navigation links
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const page = link.dataset.page;
-            if (page !== currentPage) loadPage(page);
-        });
-    });
-
-    // Transaction modal handling
-    const openTransactionModal = () => {
-        transactionForm.reset();
-        document.getElementById('transactionDate').valueAsDate = new Date();
-        document.getElementById('saveTransactionBtn').textContent = 'Add Transaction';
-        editTransactionId = null;
-        transactionModal.classList.add('active');
-    };
-
-    // Add transaction buttons
-    const addTransactionBtn = document.getElementById('addTransactionBtn');
-    if (addTransactionBtn) {
-        addTransactionBtn.addEventListener('click', openTransactionModal);
-    }
-
-    const addFirstTransactionBtn = document.getElementById('addFirstTransactionBtn');
-    if (addFirstTransactionBtn) {
-        addFirstTransactionBtn.addEventListener('click', openTransactionModal);
-    }
-
-    // Transaction item actions (edit/delete)
-    document.querySelectorAll('.transaction-item .action-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const transactionId = parseInt(btn.closest('.transaction-item').dataset.id);
-
-            if (btn.classList.contains('edit')) {
-                const transaction = transactions.find(t => t.id === transactionId);
-                if (transaction) {
-                    editTransactionId = transaction.id;
-                    document.getElementById('transactionName').value = transaction.name;
-                    document.getElementById('transactionAmount').value = transaction.amount;
-                    document.querySelector(`input[name="transactionType"][value="${transaction.type}"]`).checked = true;
-                    document.getElementById('transactionCategory').value = transaction.category;
-                    document.getElementById('transactionDate').value = transaction.date;
-                    document.getElementById('transactionNotes').value = transaction.notes || '';
-                    document.getElementById('saveTransactionBtn').textContent = 'Update Transaction';
-                    transactionModal.classList.add('active');
-                }
-            } else if (btn.classList.contains('delete')) {
-                if (confirm('Are you sure you want to delete this transaction?')) {
-                    transactions = transactions.filter(t => t.id !== transactionId);
-                    users[currentUser].transactions = transactions;
-                    localStorage.setItem('users', JSON.stringify(users));
-                    loadPage(currentPage);
-                    showToast('Transaction deleted successfully!', 'success');
-                }
-            }
-        });
-    });
-
-    // Form submission handler
-    transactionForm.onsubmit = function(e) {
-        e.preventDefault();
-
-        const name = document.getElementById('transactionName').value;
-        const amount = parseFloat(document.getElementById('transactionAmount').value);
-        const type = document.querySelector('input[name="transactionType"]:checked').value;
-        const category = document.getElementById('transactionCategory').value;
-        const date = document.getElementById('transactionDate').value;
-        const notes = document.getElementById('transactionNotes').value;
-
-        if (!name || isNaN(amount) || !type || !category || !date) {
-            showToast('Please fill all required fields', 'error');
-            return;
-        }
-
-        if (editTransactionId !== null) {
-            // Update existing transaction
-            const transactionIndex = transactions.findIndex(t => t.id === editTransactionId);
-            if (transactionIndex !== -1) {
-                transactions[transactionIndex] = {
-                    ...transactions[transactionIndex],
-                    name,
-                    amount,
-                    type,
-                    category,
-                    date,
-                    notes
-                };
-            }
-        } else {
-            // Add new transaction
-            const newTransaction = {
-                id: Date.now(),
-                name,
-                amount,
-                type,
-                category,
-                date,
-                notes
-            };
-            transactions.unshift(newTransaction);
-        }
-
-        // Save to storage
-        users[currentUser].transactions = transactions;
-        localStorage.setItem('users', JSON.stringify(users));
-
-        // Reset and close
-        transactionModal.classList.remove('active');
-        transactionForm.reset();
-        loadPage(currentPage);
-        showToast(editTransactionId ? 'Transaction updated!' : 'Transaction added!', 'success');
-        editTransactionId = null;
-    };
-
-    // Theme toggle functionality
-    const themeToggle = document.getElementById('themeToggleBtn');
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            const isDark = document.body.classList.contains('dark-mode');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    // Change avatar button
+    const changeAvatarBtn = document.getElementById('changeAvatarBtn');
+    if (changeAvatarBtn) {
+        changeAvatarBtn.addEventListener('click', () => {
+            showToast('Avatar change dialog would open here', 'success');
         });
     }
 }
-*/
 
-/*
-function setupPageEvents() {
-    // Settings navigation
-    const openSettings = document.getElementById('openSettings');
-    if (openSettings) {
-        openSettings.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('settings');
-        });
-    }
+// 🔍 Live search transactions by any parameter
+// 🔍 Live search transactions by any parameter (fixed)
+document.addEventListener('input', function (e) {
+    if (e.target && e.target.id === 'searchTransactions') {
+        const searchQuery = e.target.value.toLowerCase();
+        const currentUser = localStorage.getItem('loggedInUser');
+        const users = JSON.parse(localStorage.getItem('users') || '{}');
+        const userData = users[currentUser] || {};
+        const allTransactions = userData.transactions || [];
 
-    // Logout functionality
-    const logoutUser = document.getElementById('logoutUser');
-    if (logoutUser) {
-        logoutUser.addEventListener('click', (e) => {
-            e.preventDefault();
-            localStorage.removeItem('loggedInUser');
-            window.location.href = 'index.html';
-        });
-    }
+        const filtered = allTransactions.filter(t =>
+            Object.values(t).some(value =>
+                String(value).toLowerCase().includes(searchQuery)
+            )
+        );
 
-    // Navigation links
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const page = link.dataset.page;
-            if (page !== currentPage) loadPage(page);
-        });
-    });
+        const inputVal = e.target.value;
 
-    // Transaction modal handling
-    const openTransactionModal = () => {
-        transactionForm.reset();
-        document.getElementById('transactionDate').valueAsDate = new Date();
-        document.getElementById('saveTransactionBtn').textContent = 'Add Transaction';
-        editTransactionId = null;
-        transactionModal.classList.add('active');
-    };
-
-    // Add transaction buttons
-    const addTransactionBtn = document.getElementById('addTransactionBtn');
-    if (addTransactionBtn) {
-        addTransactionBtn.addEventListener('click', openTransactionModal);
-    }
-
-    const addFirstTransactionBtn = document.getElementById('addFirstTransactionBtn');
-    if (addFirstTransactionBtn) {
-        addFirstTransactionBtn.addEventListener('click', openTransactionModal);
-    }
-
-    // Transaction item actions (edit/delete)
-    document.querySelectorAll('.transaction-item .action-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const transactionId = parseInt(btn.closest('.transaction-item').dataset.id);
-
-            if (btn.classList.contains('edit')) {
-                const transaction = transactions.find(t => t.id === transactionId);
-                if (transaction) {
-                    editTransactionId = transaction.id;
-                    document.getElementById('transactionName').value = transaction.name;
-                    document.getElementById('transactionAmount').value = transaction.amount;
-                    document.querySelector(`input[name="transactionType"][value="${transaction.type}"]`).checked = true;
-                    document.getElementById('transactionCategory').value = transaction.category;
-                    document.getElementById('transactionDate').value = transaction.date;
-                    document.getElementById('transactionNotes').value = transaction.notes || '';
-                    document.getElementById('saveTransactionBtn').textContent = 'Update Transaction';
-                    transactionModal.classList.add('active');
-                }
-            } else if (btn.classList.contains('delete')) {
-                if (confirm('Are you sure you want to delete this transaction?')) {
-                    transactions = transactions.filter(t => t.id !== transactionId);
-                    users[currentUser].transactions = transactions;
-                    localStorage.setItem('users', JSON.stringify(users));
-                    loadPage(currentPage);
-                    showToast('Transaction deleted successfully!', 'success');
-                }
-            }
-        });
-    });
-
-    // Form submission handler - NEW APPROACH
-    transactionForm.onsubmit = function(e) {
-        e.preventDefault();
-
-        const name = document.getElementById('transactionName').value;
-        const amount = parseFloat(document.getElementById('transactionAmount').value);
-        const type = document.querySelector('input[name="transactionType"]:checked').value;
-        const category = document.getElementById('transactionCategory').value;
-        const date = document.getElementById('transactionDate').value;
-        const notes = document.getElementById('transactionNotes').value;
-
-        if (!name || isNaN(amount) || !type || !category || !date) {
-            showToast('Please fill all required fields', 'error');
-            return;
+        if (currentPage === 'dashboard') {
+            mainContent.innerHTML = getDashboardContent(filtered);
+        } else if (currentPage === 'transactions') {
+            mainContent.innerHTML = getTransactionsContent(filtered);
         }
 
-        if (editTransactionId !== null) {
-            // 1. Find the original transaction
-            const originalIndex = transactions.findIndex(t => t.id === editTransactionId);
-            if (originalIndex === -1) {
-                showToast('Transaction not found!', 'error');
-                return;
-            }
+        setupPageEvents();
 
-            // 2. Create edited version
-            const editedTransaction = {
-                ...transactions[originalIndex], // Copy all original properties
-                name,
-                amount,
-                type,
-                category,
-                date,
-                notes
-            };
-
-            // 3. Remove original and insert edited version at same position
-            transactions.splice(originalIndex, 1, editedTransaction);
-        } else {
-            // Add new transaction
-            const newTransaction = {
-                id: Date.now(),
-                name,
-                amount,
-                type,
-                category,
-                date,
-                notes
-            };
-            transactions.unshift(newTransaction);
+        const newInput = document.getElementById('searchTransactions');
+        if (newInput) {
+            newInput.value = inputVal;
+            newInput.focus(); // optional: keep cursor focus
         }
-
-        // Save to storage
-        users[currentUser].transactions = transactions;
-        localStorage.setItem('users', JSON.stringify(users));
-
-        // Reset and close
-        transactionModal.classList.remove('active');
-        transactionForm.reset();
-        loadPage(currentPage);
-        showToast(editTransactionId ? 'Transaction updated!' : 'Transaction added!', 'success');
-        editTransactionId = null;
-    };
-
-    // Theme toggle functionality
-    const themeToggle = document.getElementById('themeToggleBtn');
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            const isDark = document.body.classList.contains('dark-mode');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        });
     }
-}*/
-
-function setupPageEvents() {
-    // Settings navigation
-    const openSettings = document.getElementById('openSettings');
-    if (openSettings) {
-        openSettings.addEventListener('click', (e) => {
-            e.preventDefault();
-            loadPage('settings');
-        });
-    }
-
-    // Logout functionality
-    const logoutUser = document.getElementById('logoutUser');
-    if (logoutUser) {
-        logoutUser.addEventListener('click', (e) => {
-            e.preventDefault();
-            localStorage.removeItem('loggedInUser');
-            window.location.href = 'index.html';
-        });
-    }
-
-    // Navigation links
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const page = link.dataset.page;
-            if (page !== currentPage) loadPage(page);
-        });
-    });
-
-    // Transaction modal handling
-    const openTransactionModal = () => {
-        transactionForm.reset();
-        document.getElementById('transactionDate').valueAsDate = new Date();
-        document.getElementById('saveTransactionBtn').textContent = 'Add Transaction';
-        editTransactionId = null;
-        transactionModal.classList.add('active');
-    };
-
-    // Add transaction buttons
-    const addTransactionBtn = document.getElementById('addTransactionBtn');
-    if (addTransactionBtn) {
-        addTransactionBtn.addEventListener('click', openTransactionModal);
-    }
-
-    const addFirstTransactionBtn = document.getElementById('addFirstTransactionBtn');
-    if (addFirstTransactionBtn) {
-        addFirstTransactionBtn.addEventListener('click', openTransactionModal);
-    }
-
-    // Transaction item actions (edit/delete)
-    document.querySelectorAll('.transaction-item .action-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const transactionId = parseInt(btn.closest('.transaction-item').dataset.id);
-
-            if (btn.classList.contains('edit')) {
-                const transaction = transactions.find(t => t.id === transactionId);
-                if (transaction) {
-                    editTransactionId = transaction.id;
-                    document.getElementById('transactionName').value = transaction.name;
-                    document.getElementById('transactionAmount').value = transaction.amount;
-                    document.querySelector(`input[name="transactionType"][value="${transaction.type}"]`).checked = true;
-                    document.getElementById('transactionCategory').value = transaction.category;
-                    document.getElementById('transactionDate').value = transaction.date;
-                    document.getElementById('transactionNotes').value = transaction.notes || '';
-                    document.getElementById('saveTransactionBtn').textContent = 'Update Transaction';
-                    transactionModal.classList.add('active');
-                }
-            } else if (btn.classList.contains('delete')) {
-                if (confirm('Are you sure you want to delete this transaction?')) {
-                    transactions = transactions.filter(t => t.id !== transactionId);
-                    users[currentUser].transactions = transactions;
-                    localStorage.setItem('users', JSON.stringify(users));
-                    loadPage(currentPage);
-                    showToast('Transaction deleted successfully!', 'success');
-                }
-            }
-        });
-    });
-
-    // Form submission handler - FINAL CORRECTED VERSION
-    transactionForm.onsubmit = function(e) {
-        e.preventDefault();
-
-        // Get all form values
-        const name = document.getElementById('transactionName').value.trim();
-        const amount = parseFloat(document.getElementById('transactionAmount').value);
-        const type = document.querySelector('input[name="transactionType"]:checked')?.value;
-        const category = document.getElementById('transactionCategory').value;
-        const date = document.getElementById('transactionDate').value;
-        const notes = document.getElementById('transactionNotes').value.trim();
-
-        // Validate all required fields
-        if (!name || isNaN(amount) || !type || !category || !date) {
-            showToast('Please fill all required fields', 'error');
-            return;
-        }
-
-        try {
-            if (editTransactionId !== null) {
-                // EDIT EXISTING TRANSACTION
-                // 1. Find the original transaction index
-                const originalIndex = transactions.findIndex(t => t.id === editTransactionId);
-                if (originalIndex === -1) {
-                    throw new Error('Transaction not found');
-                }
-
-                // 2. Create the edited transaction (keeping same ID)
-                const editedTransaction = {
-                    id: editTransactionId, // Keep original ID
-                    name,
-                    amount,
-                    type,
-                    category,
-                    date,
-                    notes
-                };
-
-                // 3. Remove old transaction and insert edited one at same position
-                transactions.splice(originalIndex, 1, editedTransaction);
-                
-                showToast('Transaction updated successfully!', 'success');
-            } else {
-                // ADD NEW TRANSACTION
-                const newTransaction = {
-                    id: Date.now(), // Generate new unique ID
-                    name,
-                    amount,
-                    type,
-                    category,
-                    date,
-                    notes
-                };
-                transactions.unshift(newTransaction);
-                showToast('Transaction added successfully!', 'success');
-            }
-
-            // Update storage and UI
-            users[currentUser].transactions = transactions;
-            localStorage.setItem('users', JSON.stringify(users));
-            
-            // Reset form and close modal
-            transactionModal.classList.remove('active');
-            transactionForm.reset();
-            loadPage(currentPage);
-            editTransactionId = null;
-
-        } catch (error) {
-            console.error('Transaction error:', error);
-            showToast('Failed to save transaction: ' + error.message, 'error');
-        }
-    };
-
-    // Theme toggle functionality
-    const themeToggle = document.getElementById('themeToggleBtn');
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-            const isDark = document.body.classList.contains('dark-mode');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        });
-    }
-}
+});
 
 
 
