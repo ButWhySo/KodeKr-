@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login | Spending Tracker</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/login.css" /> <!-- 🔗 Linking the dashboard-matching login CSS -->
+  <!-- Add in index.html <head> or before </body> -->
+
+
+</head>
+<body>
+
+  <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle Theme">
+    <i class="fas fa-moon"></i>
+  </button>
+  
+<!--
+  <div class="login-container">
+    <h2>Spending Tracker Login</h2>
+    <form id="loginForm">
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+    </form>
+    
+    <form id="registerForm" style="display:none;">
+        <input type="text" id="regUsername" placeholder="New Username" required>
+        <input type="password" id="regPassword" placeholder="New Password" required>
+        <button type="submit">Register</button>
+    </form>
+    
+    <a href="#" id="toggleRegister">New user? Register</a>
+    <a href="#" id="toggleLogin" style="display:none;">Already have an account? Login</a>
+    
+  </div>
+-->
+
+<div class="auth-container">
+    <h2 id="formTitle">Login</h2>
+  
+    <form id="authForm">
+      <div class="input-group" id="usernameGroup">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="Enter your username" required />
+      </div>
+  
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter your password" required />
+      </div>
+  
+      <button type="submit" id="submitBtn">Login</button>
+    </form>
+  
+    <div class="toggle-form">
+      <span id="toggleText">Don't have an account?</span>
+      <a id="toggleLink">Register</a>
+    </div>
+  </div>
+  
+  <script src="./js/auth.js"></script>
+</body>
+</html>

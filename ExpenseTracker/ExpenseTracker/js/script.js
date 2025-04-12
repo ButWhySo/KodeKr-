@@ -1,3 +1,4 @@
+
 if (!localStorage.getItem('loggedInUser')) {
     window.location.href = 'login.html';
 }
@@ -337,7 +338,6 @@ function getDashboardContent(filteredTransactions) {
 function getDashboardContent(transactions) {
     const totals = calculateTotals(transactions);
     const loggedInUser = localStorage.getItem('loggedInUser') || 'User';
-    const monthlyStats = calculateMonthlyStats(transactions);
 
     return `
         <div class="header">
@@ -367,78 +367,39 @@ function getDashboardContent(transactions) {
                     </div>
                 </div>
                 <div class="card-value">${formatCurrency(totals.balance)}</div>
-                <div class="card-footer ${totals.balance >= 0 ? 'positive' : 'negative'}">
-                    <i class="fas fa-${totals.balance >= 0 ? 'arrow-up' : 'arrow-down'}"></i>
-                    ${Math.abs(totals.balance / totals.income * 100).toFixed(1)}% of income
-                </div>
             </div>
 
             <div class="card card-income">
                 <div class="card-header">
-                    <h3 class="card-title">Total Income</h3>
+                    <h3 class="card-title">Income</h3>
                     <div class="card-icon">
                         <i class="fas fa-arrow-down"></i>
                     </div>
                 </div>
                 <div class="card-value">${formatCurrency(totals.income)}</div>
-                <div class="card-footer positive">
-                    <i class="fas fa-arrow-up"></i>
-                    ${monthlyStats.incomeGrowth}% vs last month
-                </div>
             </div>
 
             <div class="card card-expense">
                 <div class="card-header">
-                    <h3 class="card-title">Total Expenses</h3>
+                    <h3 class="card-title">Expenses</h3>
                     <div class="card-icon">
                         <i class="fas fa-arrow-up"></i>
                     </div>
                 </div>
                 <div class="card-value">${formatCurrency(totals.expenses)}</div>
-                <div class="card-footer negative">
-                    <i class="fas fa-arrow-up"></i>
-                    ${monthlyStats.expenseGrowth}% vs last month
-                </div>
             </div>
         </div>
 
-        <div class="chart-container">
-            <canvas id="balanceTrendChart"></canvas>
-        </div>
-        <div class="statistics-section">
-            <div class="stat-card">
-                <div class="stat-title">Average Daily Spending</div>
-                <div class="stat-value">${formatCurrency(monthlyStats.avgDailySpending)}</div>
-                <div class="stat-change ${monthlyStats.avgDailySpendingChange >= 0 ? 'positive' : 'negative'}">
-                    <i class="fas fa-${monthlyStats.avgDailySpendingChange >= 0 ? 'arrow-up' : 'arrow-down'}"></i>
-                    ${Math.abs(monthlyStats.avgDailySpendingChange)}% vs last month
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">Largest Expense</div>
-                <div class="stat-value">${formatCurrency(monthlyStats.largestExpense)}</div>
-                <div class="stat-change">${monthlyStats.largestExpenseCategory}</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title">Savings Rate</div>
-                <div class="stat-value">${monthlyStats.savingsRate}%</div>
-                <div class="stat-change ${monthlyStats.savingsRateChange >= 0 ? 'positive' : 'negative'}">
-                    <i class="fas fa-${monthlyStats.savingsRateChange >= 0 ? 'arrow-up' : 'arrow-down'}"></i>
-                    ${Math.abs(monthlyStats.savingsRateChange)}% vs last month
-                </div>
-            </div>
-        </div>
         <div class="transactions-container">
             <div class="transactions-header">
                 <h2 class="section-title">Recent Transactions</h2>
-                <div class="transaction-actions">
-                    <button class="btn btn-primary" id="addTransactionBtn">
-                        <i class="fas fa-plus"></i> Add Transaction
-                    </button>
-                </div>
             </div>
-            ${generateTransactionList(transactions.slice(0, 5))}
+            ${generateTransactionList(transactions)}
         </div>
+
+        <button class="floating-add-btn" id="addTransactionBtn">
+            <i class="fas fa-plus"></i>
+        </button>
     `;
 }
 
@@ -449,7 +410,6 @@ function getDashboardContent(filteredTransactions) {
     const allTransactions = users[currentUser]?.transactions || [];
 
     const totals = calculateTotals(allTransactions); // full data for totals
-    const monthlyStats = calculateMonthlyStats(allTransactions);
 
     return `
         <div class="header">
@@ -479,38 +439,26 @@ function getDashboardContent(filteredTransactions) {
                     </div>
                 </div>
                 <div class="card-value">${formatCurrency(totals.balance)}</div>
-                <div class="card-footer ${totals.balance >= 0 ? 'positive' : 'negative'}">
-                    <i class="fas fa-${totals.balance >= 0 ? 'arrow-up' : 'arrow-down'}"></i>
-                    ${Math.abs(totals.balance / totals.income * 100).toFixed(1)}% of income
-                </div>
             </div>
 
             <div class="card card-income">
                 <div class="card-header">
-                    <h3 class="card-title">Total Income</h3>
+                    <h3 class="card-title">Income</h3>
                     <div class="card-icon">
                         <i class="fas fa-arrow-down"></i>
                     </div>
                 </div>
                 <div class="card-value">${formatCurrency(totals.income)}</div>
-                <div class="card-footer positive">
-                    <i class="fas fa-arrow-up"></i>
-                    ${monthlyStats.incomeGrowth}% vs last month
-                </div>
             </div>
 
             <div class="card card-expense">
                 <div class="card-header">
-                    <h3 class="card-title">Total Expenses</h3>
+                    <h3 class="card-title">Expenses</h3>
                     <div class="card-icon">
                         <i class="fas fa-arrow-up"></i>
                     </div>
                 </div>
                 <div class="card-value">${formatCurrency(totals.expenses)}</div>
-                <div class="card-footer negative">
-                    <i class="fas fa-arrow-up"></i>
-                    ${monthlyStats.expenseGrowth}% vs last month
-                </div>
             </div>
         </div>
 
@@ -616,138 +564,201 @@ function getTransactionsContent(transactions = []) {
 
 // Budgets content
 function getBudgetsContent() {
-    const budgets = JSON.parse(localStorage.getItem(`${currentUser}_budgets`) || '[]');
-    
     return `
-    <div class="header">
-        <h1 class="page-title">Budgets</h1>
-        <div class="header-actions">
-            <button class="btn btn-primary" id="addBudgetBtn">
-                <i class="fas fa-plus"></i> Add Budget
-            </button>
-        </div>
-    </div>
-    <div class="budgets-container">
-        ${budgets.length === 0 ? `
-            <div class="empty-state">
-                <div class="empty-icon">
-                    <i class="fas fa-chart-pie"></i>
+        <div class="header">
+            <h1 class="page-title">Budgets</h1>
+            <div class="header-actions">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search budgets...">
                 </div>
-                <h3 class="empty-title">No budgets set</h3>
-                <p class="empty-text">Create a budget to track your spending limits</p>
-                <button class="btn btn-primary" id="createFirstBudgetBtn">
+                <button class="btn btn-primary" id="addBudgetBtn">
                     <i class="fas fa-plus"></i> Create Budget
                 </button>
             </div>
-        ` : `
-            <div class="budgets-grid">
-                ${budgets.map(budget => `
-                    <div class="budget-card" data-id="${budget.id}">
-                        <div class="budget-header">
-                            <h3>${budget.category}</h3>
-                            <div class="budget-icon ${budget.category.toLowerCase()}">
-                                <i class="fas ${getCategoryIcon(budget.category)}"></i>
-                            </div>
-                        </div>
-                        <div class="budget-progress">
-                            <div class="progress-bar">
-                                <div class="progress" style="width: ${Math.min((budget.spent / budget.limit) * 100, 100)}%"></div>
-                            </div>
-                            <div class="budget-amounts">
-                                <span>${formatCurrency(budget.spent)} / ${formatCurrency(budget.limit)}</span>
-                                <span class="budget-percentage">${Math.round((budget.spent / budget.limit) * 100)}%</span>
-                            </div>
-                        </div>
-                        <div class="budget-footer">
-                            <span class="budget-period">${budget.period}</span>
-                            <div class="budget-actions">
-                                <button class="action-btn edit" data-id="${budget.id}">
-                                    <i class="fas fa-pencil-alt"></i>
-                                </button>
-                                <button class="action-btn delete" data-id="${budget.id}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
+        </div>
+
+        <div class="budgets-container">
+            <div class="section-header">
+                <h2 class="section-title">Monthly Budgets</h2>
+                <div class="budget-actions">
+                    <button class="btn btn-outline">
+                        <i class="fas fa-calendar"></i> May 2023
+                    </button>
+                </div>
             </div>
-        `}
-    </div>
+            
+            <div class="budget-cards">
+                <div class="budget-card">
+                    <div class="budget-header">
+                        <h3>Food & Dining</h3>
+                        <span class="budget-amount">${formatCurrency(500)}</span>
+                    </div>
+                    <div class="budget-progress">
+                        <div class="progress-bar" style="width: 65%; background: #ff7675;"></div>
+                    </div>
+                    <div class="budget-footer">
+                        <span>${formatCurrency(325)} spent</span>
+                        <span>${formatCurrency(175)} remaining</span>
+                    </div>
+                </div>
+                
+                <div class="budget-card">
+                    <div class="budget-header">
+                        <h3>Shopping</h3>
+                        <span class="budget-amount">${formatCurrency(300)}</span>
+                    </div>
+                    <div class="budget-progress">
+                        <div class="progress-bar" style="width: 90%; background: #a29bfe;"></div>
+                    </div>
+                    <div class="budget-footer">
+                        <span>${formatCurrency(270)} spent</span>
+                        <span>${formatCurrency(30)} remaining</span>
+                    </div>
+                </div>
+                
+                <div class="budget-card">
+                    <div class="budget-header">
+                        <h3>Transportation</h3>
+                        <span class="budget-amount">${formatCurrency(200)}</span>
+                    </div>
+                    <div class="budget-progress">
+                        <div class="progress-bar" style="width: 45%; background: #fdcb6e;"></div>
+                    </div>
+                    <div class="budget-footer">
+                        <span>${formatCurrency(90)} spent</span>
+                        <span>${formatCurrency(110)} remaining</span>
+                    </div>
+                </div>
+                
+                <div class="budget-card">
+                    <div class="budget-header">
+                        <h3>Entertainment</h3>
+                        <span class="budget-amount">${formatCurrency(150)}</span>
+                    </div>
+                    <div class="budget-progress">
+                        <div class="progress-bar" style="width: 30%; background: #fd79a8;"></div>
+                    </div>
+                    <div class="budget-footer">
+                        <span>${formatCurrency(45)} spent</span>
+                        <span>${formatCurrency(105)} remaining</span>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="btn btn-outline" style="width: 100%; margin-top: 1.5rem;" id="addAnotherBudgetBtn">
+                <i class="fas fa-plus"></i> Add Another Budget
+            </button>
+        </div>
     `;
 }
 
 // Goals content
 function getGoalsContent() {
-    const goals = JSON.parse(localStorage.getItem(`${currentUser}_goals`) || '[]');
-    
     return `
-    <div class="header">
-        <h1 class="page-title">Financial Goals</h1>
-        <div class="header-actions">
-            <button class="btn btn-primary" id="addGoalBtn">
-                <i class="fas fa-plus"></i> Add Goal
-            </button>
+        <div class="header">
+            <h1 class="page-title">Goals</h1>
+            <div class="header-actions">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search goals...">
+                </div>
+                <button class="btn btn-primary" id="addGoalBtn">
+                    <i class="fas fa-plus"></i> Create Goal
+                </button>
+            </div>
         </div>
-    </div>
-    <div class="goals-container">
-        ${goals.length === 0 ? `
+
+        <div class="goals-container">
+            <div class="section-header">
+                <h2 class="section-title">My Savings Goals</h2>
+                <div class="goal-actions">
+                    <button class="btn btn-outline">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
+                </div>
+            </div>
+            
+            <div class="goal-cards">
+                <div class="goal-card">
+                    <div class="goal-icon">
+                        <i class="fas fa-home"></i>
+                    </div>
+                    <div class="goal-details">
+                        <h3>Down Payment for House</h3>
+                        <p>Target: ${formatCurrency(50000)} by Dec 2025</p>
+                        <div class="goal-progress">
+                            <div class="progress-bar" style="width: 35%;"></div>
+                        </div>
+                        <div class="goal-stats">
+                            <span>${formatCurrency(17500)} saved</span>
+                            <span>35% completed</span>
+                        </div>
+                    </div>
+                    <div class="goal-actions">
+                        <button class="action-btn" id="goalMenuBtn1">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="goal-card">
+                    <div class="goal-icon">
+                        <i class="fas fa-car"></i>
+                    </div>
+                    <div class="goal-details">
+                        <h3>New Car</h3>
+                        <p>Target: ${formatCurrency(15000)} by Jun 2024</p>
+                        <div class="goal-progress">
+                            <div class="progress-bar" style="width: 60%;"></div>
+                        </div>
+                        <div class="goal-stats">
+                            <span>${formatCurrency(9000)} saved</span>
+                            <span>60% completed</span>
+                        </div>
+                    </div>
+                    <div class="goal-actions">
+                        <button class="action-btn" id="goalMenuBtn2">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="goal-card">
+                    <div class="goal-icon">
+                        <i class="fas fa-umbrella-beach"></i>
+                    </div>
+                    <div class="goal-details">
+                        <h3>Vacation to Hawaii</h3>
+                        <p>Target: ${formatCurrency(5000)} by Mar 2024</p>
+                        <div class="goal-progress">
+                            <div class="progress-bar" style="width: 20%;"></div>
+                        </div>
+                        <div class="goal-stats">
+                            <span>${formatCurrency(1000)} saved</span>
+                            <span>20% completed</span>
+                        </div>
+                    </div>
+                    <div class="goal-actions">
+                        <button class="action-btn" id="goalMenuBtn3">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
             <div class="empty-state">
                 <div class="empty-icon">
                     <i class="fas fa-bullseye"></i>
                 </div>
-                <h3 class="empty-title">No goals set</h3>
-                <p class="empty-text">Set financial goals to track your progress</p>
-                <button class="btn btn-primary" id="createFirstGoalBtn">
+                <h3 class="empty-title">Create your first goal</h3>
+                <p class="empty-text">Set financial goals and track your progress towards achieving them</p>
+                <button class="btn btn-primary" id="addFirstGoalBtn">
                     <i class="fas fa-plus"></i> Create Goal
                 </button>
             </div>
-        ` : `
-            <div class="goals-grid">
-                ${goals.map(goal => `
-                    <div class="goal-card" data-id="${goal.id}">
-                        <div class="goal-header">
-                            <h3>${goal.name}</h3>
-                            <div class="goal-icon">
-                                <i class="fas ${getGoalIcon(goal.type)}"></i>
-                            </div>
-                        </div>
-                        <div class="goal-progress">
-                            <div class="progress-bar">
-                                <div class="progress" style="width: ${Math.min((goal.current / goal.target) * 100, 100)}%"></div>
-                            </div>
-                            <div class="goal-amounts">
-                                <span>${formatCurrency(goal.current)} / ${formatCurrency(goal.target)}</span>
-                                <span class="goal-percentage">${Math.round((goal.current / goal.target) * 100)}%</span>
-                            </div>
-                        </div>
-                        <div class="goal-footer">
-                            <span class="goal-deadline">Due: ${formatDate(goal.deadline)}</span>
-                            <div class="goal-actions">
-                                <button class="action-btn edit" data-id="${goal.id}">
-                                    <i class="fas fa-pencil-alt"></i>
-                                </button>
-                                <button class="action-btn delete" data-id="${goal.id}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `}
-    </div>
+        </div>
     `;
-}
-
-function getGoalIcon(type) {
-    switch (type) {
-        case 'savings': return 'fa-piggy-bank';
-        case 'debt': return 'fa-credit-card';
-        case 'investment': return 'fa-chart-line';
-        case 'purchase': return 'fa-shopping-cart';
-        default: return 'fa-bullseye';
-    }
 }
 
 // Reports content
@@ -775,7 +786,16 @@ function getReportsContent() {
         </div>
 
         <div class="reports-container">
-            
+            <div class="charts-row">
+                <div class="chart-card">
+                    <h3>Balance Over Time</h3>
+                    <canvas id="balanceTrendChart" height="300"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Income vs Expenses</h3>
+                    <canvas id="incomeExpenseChart" height="300"></canvas>
+                </div>
+            </div>
 
 
             <!-- Chart Section -->
@@ -1202,14 +1222,15 @@ function renderReportsCharts(transactions) {
     const sorted = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
 
     sorted.forEach(tx => {
-        if (tx.type === 'income') balance += tx.amount;
-        else {
-            balance -= tx.amount;
+        if (tx.type === 'income') {
+            runningBalance += tx.amount;
+        } else {
+            runningBalance -= tx.amount;
             categoryData[tx.category] = (categoryData[tx.category] || 0) + tx.amount;
         }
 
         dateLabels.push(new Date(tx.date).toLocaleDateString());
-        balanceData.push(balance);
+        balanceData.push(runningBalance);
     });
 
     // Balance Over Time Line Chart
@@ -1250,74 +1271,80 @@ function renderReportsCharts(transactions) {
 
 // Settings content
 function getSettingsContent() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    const savedCurrency = localStorage.getItem('currency') || 'USD';
-    const savedDateFormat = localStorage.getItem('dateFormat') || 'MM/DD/YYYY';
-    
     return `
-    <div class="header">
-        <h1 class="page-title">Settings</h1>
-    </div>
-    <div class="settings-container">
-        <div class="settings-section">
-            <h2 class="section-title">Appearance</h2>
-            <div class="settings-group">
-                <label class="settings-label">Theme</label>
-                <div class="radio-group">
-                    <div class="radio-option">
-                        <input type="radio" id="lightTheme" name="theme" value="light" ${savedTheme === 'light' ? 'checked' : ''}>
-                        <label for="lightTheme" class="radio-label">
-                            <i class="fas fa-sun"></i>
-                            Light
-                        </label>
+        <div class="header">
+            <h1 class="page-title">Settings</h1>
+        </div>
+
+        <div class="settings-container">
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-tab="account">Account</button>
+                <button class="settings-tab" data-tab="preferences">Preferences</button>
+                <button class="settings-tab" data-tab="notifications">Notifications</button>
+                <button class="settings-tab" data-tab="security">Security</button>
+                <button class="settings-tab" data-tab="export">Export Data</button>
+            </div>
+            
+            <div class="settings-content">
+                <h2>Account Settings</h2>
+                
+                <form class="settings-form" id="accountSettingsForm">
+                    <div class="form-group">
+                        <label class="form-label">Profile Picture</label>
+                        <div class="avatar-upload">
+                            <div class="avatar-preview">
+                                <div class="user-avatar">JD</div>
+                            </div>
+                            <button type="button" class="btn btn-outline" id="changeAvatarBtn">
+                                <i class="fas fa-camera"></i> Change Photo
+                            </button>
+                        </div>
                     </div>
-                    <div class="radio-option">
-                        <input type="radio" id="darkTheme" name="theme" value="dark" ${savedTheme === 'dark' ? 'checked' : ''}>
-                        <label for="darkTheme" class="radio-label">
-                            <i class="fas fa-moon"></i>
-                            Dark
-                        </label>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Name</label>
+                        <div class="form-row">
+                            <input type="text" class="form-control" id="firstName" placeholder="First Name" value="John">
+                            <input type="text" class="form-control" id="lastName" placeholder="Last Name" value="Doe">
+                        </div>
                     </div>
-                </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" value="john.doe@example.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Currency</label>
+                        <select class="form-control" id="currency">
+                            <option>US Dollar (USD)</option>
+                            <option>Euro (EUR)</option>
+                            <option>British Pound (GBP)</option>
+                            <option>Japanese Yen (JPY)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Time Zone</label>
+                        <select class="form-control" id="timezone">
+                            <option>(GMT-05:00) Eastern Time</option>
+                            <option>(GMT-06:00) Central Time</option>
+                            <option>(GMT-07:00) Mountain Time</option>
+                            <option>(GMT-08:00) Pacific Time</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelSettingsBtn">
+                            Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="saveSettingsBtn">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
-        
-        <div class="settings-section">
-            <h2 class="section-title">Preferences</h2>
-            <div class="settings-group">
-                <label class="settings-label">Currency</label>
-                <select id="currencySelect" class="form-control form-select">
-                    <option value="USD" ${savedCurrency === 'USD' ? 'selected' : ''}>USD ($)</option>
-                    <option value="EUR" ${savedCurrency === 'EUR' ? 'selected' : ''}>EUR (€)</option>
-                    <option value="GBP" ${savedCurrency === 'GBP' ? 'selected' : ''}>GBP (£)</option>
-                    <option value="JPY" ${savedCurrency === 'JPY' ? 'selected' : ''}>JPY (¥)</option>
-                </select>
-            </div>
-            <div class="settings-group">
-                <label class="settings-label">Date Format</label>
-                <select id="dateFormatSelect" class="form-control form-select">
-                    <option value="MM/DD/YYYY" ${savedDateFormat === 'MM/DD/YYYY' ? 'selected' : ''}>MM/DD/YYYY</option>
-                    <option value="DD/MM/YYYY" ${savedDateFormat === 'DD/MM/YYYY' ? 'selected' : ''}>DD/MM/YYYY</option>
-                    <option value="YYYY-MM-DD" ${savedDateFormat === 'YYYY-MM-DD' ? 'selected' : ''}>YYYY-MM-DD</option>
-                </select>
-            </div>
-        </div>
-        
-        <div class="settings-section">
-            <h2 class="section-title">Data Management</h2>
-            <div class="settings-group">
-                <button class="btn btn-outline" id="exportDataBtn">
-                    <i class="fas fa-download"></i> Export Data
-                </button>
-                <button class="btn btn-outline" id="importDataBtn">
-                    <i class="fas fa-upload"></i> Import Data
-                </button>
-                <button class="btn btn-outline" id="clearDataBtn">
-                    <i class="fas fa-trash"></i> Clear All Data
-                </button>
-            </div>
-        </div>
-    </div>
     `;
 }
 
@@ -1778,12 +1805,6 @@ if (filterType && filterCategory && filterDateRange) {
             showToast('Avatar change dialog would open here', 'success');
         });
     }
-
-    // Add search handler
-    const searchInput = document.getElementById('searchTransactions');
-    if (searchInput) {
-        searchInput.addEventListener('input', handleSearch);
-    }
 }
 
 // 🔍 Live search transactions by any parameter
@@ -1870,28 +1891,15 @@ function renderDashboardCharts(transactions) {
             datasets: [{
                 label: 'Net Balance',
                 data,
-                borderWidth: 2,
                 fill: false,
+                borderWidth: 2,
                 tension: 0.3
             }]
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.1)'
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    }
-                }
-            }
+            scales: { y: { beginAtZero: false } }
         }
     });
 
@@ -1998,252 +2006,7 @@ if (window.trendChart) window.trendChart.destroy();
     }
 }
 
-// Search functionality with debounce
-let searchTimeout;
-function handleSearch(event) {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-        const searchTerm = event.target.value.toLowerCase();
-        const filteredTransactions = transactions.filter(t => 
-            t.name.toLowerCase().includes(searchTerm) ||
-            t.category.toLowerCase().includes(searchTerm) ||
-            t.notes?.toLowerCase().includes(searchTerm)
-        );
-        updateCurrentPageContent(filteredTransactions);
-    }, 300);
-}
-
-// Add the calculateMonthlyStats function
-function calculateMonthlyStats(transactions) {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    
-    const currentMonthTransactions = transactions.filter(t => {
-        const date = new Date(t.date);
-        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    });
-    
-    const lastMonthTransactions = transactions.filter(t => {
-        const date = new Date(t.date);
-        return date.getMonth() === currentMonth - 1 && date.getFullYear() === currentYear;
-    });
-    
-    const currentMonthExpenses = currentMonthTransactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
-        
-    const lastMonthExpenses = lastMonthTransactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
-        
-    const currentMonthIncome = currentMonthTransactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
-        
-    const lastMonthIncome = lastMonthTransactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
-    
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const avgDailySpending = currentMonthExpenses / daysInMonth;
-    const lastMonthAvgDailySpending = lastMonthExpenses / new Date(currentYear, currentMonth, 0).getDate();
-    
-    const largestExpense = Math.max(...currentMonthTransactions
-        .filter(t => t.type === 'expense')
-        .map(t => t.amount));
-        
-    const largestExpenseTransaction = currentMonthTransactions
-        .find(t => t.amount === largestExpense);
-    
-    return {
-        avgDailySpending,
-        avgDailySpendingChange: ((avgDailySpending - lastMonthAvgDailySpending) / lastMonthAvgDailySpending * 100) || 0,
-        largestExpense,
-        largestExpenseCategory: largestExpenseTransaction?.category || 'N/A',
-        savingsRate: currentMonthIncome ? ((currentMonthIncome - currentMonthExpenses) / currentMonthIncome * 100) : 0,
-        savingsRateChange: lastMonthIncome ? 
-            (((currentMonthIncome - currentMonthExpenses) / currentMonthIncome * 100) - 
-            ((lastMonthIncome - lastMonthExpenses) / lastMonthIncome * 100)) : 0,
-        incomeGrowth: lastMonthIncome ? ((currentMonthIncome - lastMonthIncome) / lastMonthIncome * 100) : 0,
-        expenseGrowth: lastMonthExpenses ? ((currentMonthExpenses - lastMonthExpenses) / lastMonthExpenses * 100) : 0
-    };
-}
 
 
 // Start the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', initApp);
-
-// Show main content
-function showMainContent() {
-    const mainContent = document.getElementById('mainContent');
-    mainContent.innerHTML = `
-        <button class="hamburger-btn" id="hamburgerBtn">
-            <i class="fas fa-bars"></i>
-        </button>
-        <div class="mobile-menu" id="mobileMenu">
-            <div class="sidebar-header">
-                <h2>ExpenseTracker</h2>
-            </div>
-            <nav class="sidebar-nav">
-                <a href="#" class="nav-item active" data-page="dashboard">
-                    <i class="fas fa-home"></i> Dashboard
-                </a>
-                <a href="#" class="nav-item" data-page="transactions">
-                    <i class="fas fa-exchange-alt"></i> Transactions
-                </a>
-                <a href="#" class="nav-item" data-page="budget">
-                    <i class="fas fa-wallet"></i> Budget
-                </a>
-                <a href="#" class="nav-item" data-page="goals">
-                    <i class="fas fa-bullseye"></i> Goals
-                </a>
-                <a href="#" class="nav-item" data-page="reports">
-                    <i class="fas fa-chart-bar"></i> Reports
-                </a>
-                <a href="#" class="nav-item" data-page="settings">
-                    <i class="fas fa-cog"></i> Settings
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <button id="logoutBtn" class="btn btn-outline">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
-            </div>
-        </div>
-        <div class="main-content">
-            <div class="topbar">
-                <div class="user-info">
-                    <span>Welcome, ${currentUser}</span>
-                </div>
-                <div class="theme-toggle">
-                    <button id="themeToggle" class="btn btn-icon">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                </div>
-            </div>
-            <div id="pageContent"></div>
-        </div>
-    `;
-
-    // Setup navigation events
-    setupNavigationEvents();
-    setupThemeToggle();
-    setupHamburgerMenu();
-    loadPage('dashboard');
-}
-
-// Setup hamburger menu
-function setupHamburgerMenu() {
-    const hamburgerBtn = document.getElementById('hamburgerBtn');
-    const mobileMenu = document.getElementById('mobileMenu');
-    let menuTimeout;
-
-    if (hamburgerBtn && mobileMenu) {
-        hamburgerBtn.addEventListener('click', () => {
-            mobileMenu.classList.add('active');
-            
-            // Clear any existing timeout
-            if (menuTimeout) {
-                clearTimeout(menuTimeout);
-            }
-            
-            // Set new timeout to close menu after 4 seconds
-            menuTimeout = setTimeout(() => {
-                mobileMenu.classList.remove('active');
-            }, 4000);
-        });
-
-        // Close menu when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!mobileMenu.contains(e.target) && !hamburgerBtn.contains(e.target)) {
-                mobileMenu.classList.remove('active');
-            }
-        });
-    }
-}
-
-// Update the getDashboardContent function to use floating action button
-function getDashboardContent(filteredTransactions) {
-    const currentUser = localStorage.getItem('loggedInUser');
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    const allTransactions = users[currentUser]?.transactions || [];
-
-    const totals = calculateTotals(allTransactions);
-    const monthlyStats = calculateMonthlyStats(allTransactions);
-
-    return `
-        <div class="header">
-            <h1 class="page-title">Dashboard</h1>
-            <div class="header-actions">
-                <div class="search-bar">
-                    <i class="fas fa-search"></i>
-                    <input type="text" placeholder="Search transactions..." id="searchTransactions">
-                </div>
-                <div class="user-profile">
-                    <div class="user-avatar">${currentUser?.charAt(0).toUpperCase()}</div>
-                    <span class="user-name">${currentUser}</span>
-                    <div class="user-dropdown">
-                        <a href="#" id="openSettings"><i class="fas fa-cog"></i> Settings</a>
-                        <a href="#" id="logoutUser"><i class="fas fa-sign-out-alt"></i> Logout</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="dashboard-cards">
-            <div class="card card-balance">
-                <div class="card-header">
-                    <h3 class="card-title">Total Balance</h3>
-                    <div class="card-icon">
-                        <i class="fas fa-wallet"></i>
-                    </div>
-                </div>
-                <div class="card-value">${formatCurrency(totals.balance)}</div>
-                <div class="card-footer ${totals.balance >= 0 ? 'positive' : 'negative'}">
-                    <i class="fas fa-${totals.balance >= 0 ? 'arrow-up' : 'arrow-down'}"></i>
-                    ${Math.abs(totals.balance / totals.income * 100).toFixed(1)}% of income
-                </div>
-            </div>
-
-            <div class="card card-income">
-                <div class="card-header">
-                    <h3 class="card-title">Total Income</h3>
-                    <div class="card-icon">
-                        <i class="fas fa-arrow-down"></i>
-                    </div>
-                </div>
-                <div class="card-value">${formatCurrency(totals.income)}</div>
-                <div class="card-footer positive">
-                    <i class="fas fa-arrow-up"></i>
-                    ${monthlyStats.incomeGrowth}% vs last month
-                </div>
-            </div>
-
-            <div class="card card-expense">
-                <div class="card-header">
-                    <h3 class="card-title">Total Expenses</h3>
-                    <div class="card-icon">
-                        <i class="fas fa-arrow-up"></i>
-                    </div>
-                </div>
-                <div class="card-value">${formatCurrency(totals.expenses)}</div>
-                <div class="card-footer negative">
-                    <i class="fas fa-arrow-up"></i>
-                    ${monthlyStats.expenseGrowth}% vs last month
-                </div>
-            </div>
-        </div>
-
-        <div class="transactions-container">
-            <div class="transactions-header">
-                <h2 class="section-title">Recent Transactions</h2>
-            </div>
-            ${generateTransactionList(filteredTransactions)}
-        </div>
-
-        <button class="floating-action-btn" id="addTransactionBtn">
-            <i class="fas fa-plus"></i>
-        </button>
-    `;
-}

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spending Tracker | Smart Money Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./css/stylesheet.css">
+    
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loader" id="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-wallet"></i>
+                </div>
+                <div class="logo-text">Spending Tracker</div>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-page="dashboard">
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    
+                      
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="transactions">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>Transactions</span>
+                      </a>
+                      
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="budgets">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Budgets</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="goals">
+                        <i class="fas fa-bullseye"></i>
+                        <span>Goals</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="reports">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>Settings</span>
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            
+            <!-- Content will be dynamically loaded here -->
+        </main>
+    </div>
+
+    <!-- Add Transaction Modal -->
+    <div class="modal" id="transactionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Transaction</h3>
+                <button class="close-btn" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="transactionForm">
+                    <div class="form-group">
+                        <label for="transactionName" class="form-label">Transaction Name</label>
+                        <input type="text" id="transactionName" class="form-control" placeholder="e.g. Groceries" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="transactionAmount" class="form-label">Amount</label>
+                        <input type="number" id="transactionAmount" class="form-control" placeholder="0.00" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Type</label>
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" id="income" name="transactionType" value="income" required>
+                                <label for="income" class="radio-label">
+                                    <i class="fas fa-arrow-down"></i>
+                                    Income
+                                </label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="expense" name="transactionType" value="expense" checked>
+                                <label for="expense" class="radio-label">
+                                    <i class="fas fa-arrow-up"></i>
+                                    Expense
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="transactionCategory" class="form-label">Category</label>
+                        <select id="transactionCategory" class="form-control form-select" required>
+                            <option value="food">Food & Dining</option>
+                            <option value="shopping">Shopping</option>
+                            <option value="bills">Bills & Utilities</option>
+                            <option value="transport">Transportation</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="transactionDate" class="form-label">Date</label>
+                        <input type="date" id="transactionDate" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="transactionNotes" class="form-label">Notes (Optional)</label>
+                        <textarea id="transactionNotes" class="form-control" rows="3" placeholder="Add any additional details"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelTransactionBtn">Cancel</button>
+                <button type="submit" form="transactionForm" class="btn btn-primary" id="saveTransactionBtn">Add Transaction</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="./js/script.js"></script>
+</body>
+</html>
