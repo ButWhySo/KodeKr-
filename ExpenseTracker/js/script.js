@@ -18,6 +18,8 @@ const cancelTransactionBtn = document.getElementById('cancelTransactionBtn');
 const saveTransactionBtn = document.getElementById('saveTransactionBtn');
 const transactionForm = document.getElementById('transactionForm');
 let currentUser = localStorage.getItem('loggedInUser') || '';
+let editTransactionId = null; // To track if we're editing an existing transaction
+
 
 // Current active page
 let currentPage = 'dashboard';
@@ -1102,16 +1104,17 @@ if (logoutUser) {
                 }
             } else if (btn.classList.contains('delete')) {
                 if (confirm('Are you sure you want to delete this transaction?')) {
-                    // Remove transaction from array
+                    // ❌ Your bug was not saving updated list back
+            
                     transactions = transactions.filter(t => t.id != transactionId);
-
-                    // Reload current page
+                    users[currentUser].transactions = transactions; // ✅ Update in users object
+                    localStorage.setItem('users', JSON.stringify(users)); // ✅ Save to localStorage
+            
                     loadPage(currentPage);
-
-                    // Show success message
                     showToast('Transaction deleted successfully!', 'success');
                 }
             }
+            
         });
     });
 
