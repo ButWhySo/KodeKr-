@@ -260,6 +260,8 @@ function getDashboardContent(transactions) {
         </div>
     </div>`;
 }*/
+
+/*
 function getDashboardContent(filteredTransactions) {
     const currentUser = localStorage.getItem('loggedInUser');
     const users = JSON.parse(localStorage.getItem('users') || '{}');
@@ -332,6 +334,7 @@ function getDashboardContent(filteredTransactions) {
 }
 
 
+
 function getDashboardContent(transactions) {
     const totals = calculateTotals(transactions);
     const loggedInUser = localStorage.getItem('loggedInUser') || 'User';
@@ -399,6 +402,83 @@ function getDashboardContent(transactions) {
         </button>
     `;
 }
+
+*/// working , but without charts
+function getDashboardContent(filteredTransactions) {
+    const currentUser = localStorage.getItem('loggedInUser');
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+    const allTransactions = users[currentUser]?.transactions || [];
+
+    const totals = calculateTotals(allTransactions); // full data for totals
+
+    return `
+        <div class="header">
+            <h1 class="page-title">Dashboard</h1>
+            <div class="header-actions">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search transactions..." id="searchTransactions">
+                </div>
+                <div class="user-profile">
+                    <div class="user-avatar">${currentUser?.charAt(0).toUpperCase()}</div>
+                    <span class="user-name">${currentUser}</span>
+                    <div class="user-dropdown">
+                        <a href="#" id="openSettings"><i class="fas fa-cog"></i> Settings</a>
+                        <a href="#" id="logoutUser"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-cards">
+            <div class="card card-balance">
+                <div class="card-header">
+                    <h3 class="card-title">Total Balance</h3>
+                    <div class="card-icon">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                </div>
+                <div class="card-value">${formatCurrency(totals.balance)}</div>
+            </div>
+
+            <div class="card card-income">
+                <div class="card-header">
+                    <h3 class="card-title">Income</h3>
+                    <div class="card-icon">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                </div>
+                <div class="card-value">${formatCurrency(totals.income)}</div>
+            </div>
+
+            <div class="card card-expense">
+                <div class="card-header">
+                    <h3 class="card-title">Expenses</h3>
+                    <div class="card-icon">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                </div>
+                <div class="card-value">${formatCurrency(totals.expenses)}</div>
+            </div>
+        </div>
+
+
+
+    
+
+        <div class="transactions-container">
+            <div class="transactions-header">
+                <h2 class="section-title">Recent Transactions</h2>
+            </div>
+            ${generateTransactionList(filteredTransactions)}
+        </div>
+
+        <button class="floating-add-btn" id="addTransactionBtn">
+            <i class="fas fa-plus"></i>
+        </button>
+    `;
+}
+
 
 
 
@@ -682,6 +762,59 @@ function getGoalsContent() {
 }
 
 // Reports content
+// Reports content
+function getReportsContent() {
+    const currentUser = localStorage.getItem('loggedInUser');
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+    const transactions = users[currentUser]?.transactions || [];
+
+    return `
+        <div class="header">
+            <h1 class="page-title">Reports</h1>
+            <div class="header-actions">
+                <select class="form-control" id="reportPeriod">
+                    <option value="30">Last 30 Days</option>
+                    <option value="this-month">This Month</option>
+                    <option value="last-month">Last Month</option>
+                    <option value="this-year">This Year</option>
+                    <option value="all">All Time</option>
+                </select>
+                <button class="btn btn-outline">
+                    <i class="fas fa-download"></i> Export
+                </button>
+            </div>
+        </div>
+
+        <div class="reports-container">
+            <div class="charts-row">
+                <div class="chart-card">
+                    <h3>Balance Over Time</h3>
+                    <canvas id="balanceTrendChart" height="300"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Income vs Expenses</h3>
+                    <canvas id="incomeExpenseChart" height="300"></canvas>
+                </div>
+            </div>
+
+
+            <!-- Chart Section -->
+<div class="chart-section">
+    <h3>Balance Over Time</h3>
+    <canvas id="balanceTrendChart" height="100"></canvas>
+
+    <h3 style="margin-top: 2rem;">Expenses by Category</h3>
+    <canvas id="categoryPieChart" height="100"></canvas>
+</div>
+
+            <div class="transactions-summary">
+                <h3>Recent Transactions</h3>
+                ${generateTransactionList(transactions.slice(0, 5))}
+            </div>
+        </div>
+    `;
+}
+/*
 function getReportsContent() {
     return `
         <div class="header">
@@ -695,6 +828,14 @@ function getReportsContent() {
                 </button>
             </div>
         </div>
+        <div class="chart-section">
+    <h3>Balance Over Time</h3>
+    <canvas id="balanceTrendChart" height="100"></canvas>
+
+    <h3 style="margin-top: 2rem;">Expenses by Category</h3>
+    <canvas id="categoryPieChart" height="100"></canvas>
+</div>
+
 
         <div class="reports-container">
             <div class="report-tabs">
@@ -759,7 +900,374 @@ function getReportsContent() {
             </div>
         </div>
     `;
+}*/
+
+
+function filterByReportPeriod(transactions, period) {
+    const now = new Date();
+    return transactions.filter(t => {
+        const tDate = new Date(t.date);
+        switch (period) {
+            case '30':
+                return (now - tDate) / (1000 * 60 * 60 * 24) <= 30;
+            case 'this-month':
+                return tDate.getMonth() === now.getMonth() &&
+                       tDate.getFullYear() === now.getFullYear();
+            case 'last-month':
+                const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                return tDate.getMonth() === lastMonth.getMonth() &&
+                       tDate.getFullYear() === lastMonth.getFullYear();
+            case 'this-year':
+                return tDate.getFullYear() === now.getFullYear();
+            default:
+                return true;
+        }
+    });
 }
+
+
+/*
+function renderReportsCharts(transactions) {
+    if (!transactions || transactions.length === 0) {
+        showToast('No transaction data available for charts', 'info');
+        return;
+    }
+
+    // Filter transactions based on selected period
+    const period = document.getElementById('reportPeriod')?.value || '30';
+    const filteredTransactions = filterByReportPeriod(transactions, period);
+
+    // 1. Balance Trend Chart
+    renderBalanceTrendChart(filteredTransactions);
+
+    // 2. Income vs Expense Chart
+    renderIncomeExpenseChart(filteredTransactions);
+
+    // 3. Category Pie Chart
+    renderCategoryPieChart(filteredTransactions);
+
+    // 4. Monthly Bar Chart
+    renderMonthlyBarChart(filteredTransactions);
+
+    // Add event listener for period change
+    const reportPeriod = document.getElementById('reportPeriod');
+    if (reportPeriod) {
+        reportPeriod.addEventListener('change', () => {
+            const newPeriod = reportPeriod.value;
+            const newFiltered = filterByReportPeriod(transactions, newPeriod);
+            renderReportsCharts(newFiltered);
+        });
+    }
+}
+*/
+
+function renderBalanceTrendChart(transactions) {
+    const ctx = document.getElementById('balanceTrendChart')?.getContext('2d');
+    if (!ctx) return;
+
+    // Sort transactions by date
+    const sorted = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    let balance = 0;
+    const labels = [];
+    const data = [];
+
+    sorted.forEach(tx => {
+        balance += tx.type === 'income' ? tx.amount : -tx.amount;
+        labels.push(formatDate(tx.date));
+        data.push(balance);
+    });
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Net Balance',
+                data,
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                fill: true,
+                borderWidth: 2,
+                pointRadius: 3,
+                pointBackgroundColor: '#4e73df',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            return `Balance: ${(formatCurrency(context.raw))}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: (value) => formatCurrency(value)
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderIncomeExpenseChart(transactions) {
+    const ctx = document.getElementById('incomeExpenseChart')?.getContext('2d');
+    if (!ctx) return;
+
+    // Group by day
+    const dailyData = {};
+    transactions.forEach(tx => {
+        const date = formatDate(tx.date);
+        if (!dailyData[date]) {
+            dailyData[date] = { income: 0, expense: 0 };
+        }
+        if (tx.type === 'income') {
+            dailyData[date].income += tx.amount;
+        } else {
+            dailyData[date].expense += tx.amount;
+        }
+    });
+
+    const labels = Object.keys(dailyData);
+    const incomeData = labels.map(date => dailyData[date].income);
+    const expenseData = labels.map(date => dailyData[date].expense);
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: incomeData,
+                    backgroundColor: '#1cc88a',
+                    borderColor: '#1cc88a',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Expenses',
+                    data: expenseData,
+                    backgroundColor: '#e74a3b',
+                    borderColor: '#e74a3b',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (value) => formatCurrency(value)
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            return `${context.dataset.label}: ${(formatCurrency(context.raw))}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderCategoryPieChart(transactions) {
+    const ctx = document.getElementById('categoryPieChart')?.getContext('2d');
+    if (!ctx) return;
+
+    // Calculate expenses by category
+    const categoryData = {};
+    transactions.forEach(tx => {
+        if (tx.type === 'expense') {
+            categoryData[tx.category] = (categoryData[tx.category] || 0) + tx.amount;
+        }
+    });
+
+    const labels = Object.keys(categoryData);
+    const data = Object.values(categoryData);
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{
+                data,
+                backgroundColor: [
+                    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', 
+                    '#e74a3b', '#858796', '#5a5c69', '#3a3b45'
+                ],
+                hoverBackgroundColor: [
+                    '#2e59d9', '#17a673', '#2c9faf', '#dda20a', 
+                    '#be2617', '#656776', '#42444e', '#24252e'
+                ],
+                hoverBorderColor: "rgba(234, 236, 244, 1)",
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            const value = context.raw;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return `${context.label}: ${(formatCurrency(value))} (${percentage}%)`;
+                        }
+                    }
+                },
+                legend: {
+                    position: 'right',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                }
+            },
+            cutout: '70%'
+        }
+    });
+}
+
+function renderMonthlyBarChart(transactions) {
+    const ctx = document.getElementById('monthlyBarChart')?.getContext('2d');
+    if (!ctx) return;
+
+    // Group by month
+    const monthlyData = {};
+    transactions.forEach(tx => {
+        const date = new Date(tx.date);
+        const monthYear = `${date.toLocaleString('default', { month: 'short' })} ${date.getFullYear()}`;
+        
+        if (!monthlyData[monthYear]) {
+            monthlyData[monthYear] = { income: 0, expense: 0 };
+        }
+        
+        if (tx.type === 'income') {
+            monthlyData[monthYear].income += tx.amount;
+        } else {
+            monthlyData[monthYear].expense += tx.amount;
+        }
+    });
+
+    const labels = Object.keys(monthlyData);
+    const incomeData = labels.map(month => monthlyData[month].income);
+    const expenseData = labels.map(month => monthlyData[month].expense);
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: incomeData,
+                    backgroundColor: '#1cc88a',
+                    borderColor: '#1cc88a',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Expenses',
+                    data: expenseData,
+                    backgroundColor: '#e74a3b',
+                    borderColor: '#e74a3b',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: (value) => formatCurrency(value)
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            return `${context.dataset.label}: ${(formatCurrency(context.raw))}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+/*
+function renderReportsCharts(transactions) {
+    const balanceData = [];
+    const dateLabels = [];
+    const categoryData = {};
+
+    let runningBalance = 0;
+    const sorted = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    sorted.forEach(tx => {
+        if (tx.type === 'income') {
+            runningBalance += tx.amount;
+        } else {
+            runningBalance -= tx.amount;
+            categoryData[tx.category] = (categoryData[tx.category] || 0) + tx.amount;
+        }
+
+        dateLabels.push(new Date(tx.date).toLocaleDateString());
+        balanceData.push(runningBalance);
+    });
+
+    // Balance Over Time Line Chart
+    const balanceCtx = document.getElementById('balanceTrendChart')?.getContext('2d');
+    if (balanceCtx) {
+        new Chart(balanceCtx, {
+            type: 'line',
+            data: {
+                labels: dateLabels,
+                datasets: [{
+                    label: 'Net Balance',
+                    data: balanceData,
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3
+                }]
+            }
+        });
+    }
+
+    // Expenses Pie Chart
+    const pieCtx = document.getElementById('categoryPieChart')?.getContext('2d');
+    if (pieCtx) {
+        new Chart(pieCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(categoryData),
+                datasets: [{
+                    data: Object.values(categoryData),
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#9966FF', '#4BC0C0']
+                }]
+            }
+        });
+    }
+}
+*/
+
 
 // Settings content
 function getSettingsContent() {
@@ -892,7 +1400,7 @@ function loadPage(page) {
                 content = getGoalsContent();
                 break;
             case 'reports':
-                content = getReportsContent();
+                content = getReportsContent(userData.transactions || []);
                 break;
             case 'settings':
                 content = getSettingsContent();
@@ -902,8 +1410,26 @@ function loadPage(page) {
         }
 
         mainContent.innerHTML = content;
+
+        /*
+        // ✅ Render dashboard charts after DOM is updated
+        if (page === 'dashboard') {
+            setTimeout(() => {
+                renderDashboardCharts(userData.transactions || []);
+            }, 0);
+        }
+        */
+
+
+        
+        if (page === 'reports') {
+            renderReportsCharts(transactions);
+        }
+        
+        
+    
         hideLoader();
-        setupPageEvents(); // Setup event listeners for the new content
+        setupPageEvents();
     }, 500);
 
     const logoutUser = document.getElementById('logoutUser');
@@ -1305,6 +1831,145 @@ if (savedTheme === "dark") {
 }
 
 }
+
+function renderDashboardCharts(transactions) {
+    const ctxBalance = document.getElementById('balanceChart')?.getContext('2d');
+    const ctxCategory = document.getElementById('expenseCategoryChart')?.getContext('2d');
+
+    if (!ctxBalance || !ctxCategory) return;
+
+    // 💰 Balance Over Time
+    const sortedTx = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+    let balance = 0;
+    const labels = [];
+    const data = [];
+
+    sortedTx.forEach(tx => {
+        balance += tx.type === 'income' ? tx.amount : -tx.amount;
+        labels.push(new Date(tx.date).toLocaleDateString());
+        data.push(balance);
+    });
+
+    new Chart(ctxBalance, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Net Balance',
+                data,
+                fill: false,
+                borderWidth: 2,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: false } }
+        }
+    });
+
+    // 🥧 Expenses by Category
+    const categoryMap = {};
+    transactions.forEach(tx => {
+        if (tx.type === 'expense') {
+            categoryMap[tx.category] = (categoryMap[tx.category] || 0) + tx.amount;
+        }
+    });
+
+    const categoryLabels = Object.keys(categoryMap);
+    const categoryValues = Object.values(categoryMap);
+
+    new Chart(ctxCategory, {
+        type: 'doughnut',
+        data: {
+            labels: categoryLabels,
+            datasets: [{
+                data: categoryValues,
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'right' }
+            }
+        }
+    });
+}
+
+
+function renderReportsCharts(transactions) {
+    if (!window.Chart || !transactions) return;
+
+    const sorted = [...transactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const dateLabels = [];
+    const balanceData = [];
+    const categoryTotals = {};
+    let balance = 0;
+
+    sorted.forEach(tx => {
+        const dateStr = new Date(tx.date).toLocaleDateString();
+        if (!dateLabels.includes(dateStr)) {
+            dateLabels.push(dateStr);
+        }
+
+        if (tx.type === 'income') balance += tx.amount;
+        else {
+            balance -= tx.amount;
+            categoryTotals[tx.category] = (categoryTotals[tx.category] || 0) + tx.amount;
+        }
+        balanceData.push(balance);
+    });
+
+    const balanceCtx = document.getElementById('balanceTrendChart')?.getContext('2d');
+    if (balanceCtx) {
+        new Chart(balanceCtx, {
+            type: 'line',
+            data: {
+                labels: dateLabels,
+                datasets: [{
+                    label: 'Net Balance',
+                    data: balanceData,
+                    borderWidth: 2,
+                    borderColor: '#4BC0C0',
+                    fill: false,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: false }
+                }
+            }
+        });
+    }
+
+    const categoryCtx = document.getElementById('categoryPieChart')?.getContext('2d');
+    if (categoryCtx) {
+        new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(categoryTotals),
+                datasets: [{
+                    data: Object.values(categoryTotals),
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#9966FF', '#4BC0C0', '#FF9F40'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'right' }
+                }
+            }
+        });
+    }
+}
+
+
 
 // Start the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', initApp);
