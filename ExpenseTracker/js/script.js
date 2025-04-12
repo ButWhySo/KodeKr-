@@ -16,58 +16,65 @@ const closeModalBtn = document.getElementById('closeModalBtn');
 const cancelTransactionBtn = document.getElementById('cancelTransactionBtn');
 const saveTransactionBtn = document.getElementById('saveTransactionBtn');
 const transactionForm = document.getElementById('transactionForm');
+let currentUser = localStorage.getItem('loggedInUser') || '';
 
 // Current active page
 let currentPage = 'dashboard';
+let users = JSON.parse(localStorage.getItem('users') || '{}');
 
-// Sample data
+let transactions = users[currentUser]?.transactions || [];
+
+ /*
+sample tansaction data
 let transactions = [
-    { 
-        id: 1, 
-        name: "Grocery Store", 
-        amount: 85.50, 
-        type: "expense", 
-        category: "food", 
+    {
+        id: 1,
+        name: "Grocery Store",
+        amount: 85.50,
+        type: "expense",
+        category: "food",
         date: new Date().toISOString().split('T')[0],
         notes: "Weekly groceries"
     },
-    { 
-        id: 2, 
-        name: "Paycheck", 
-        amount: 1200.00, 
-        type: "income", 
-        category: "other", 
+    {
+        id: 2,
+        name: "Paycheck",
+        amount: 1200.00,
+        type: "income",
+        category: "other",
         date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         notes: "Monthly salary"
     },
-    { 
-        id: 3, 
-        name: "Electric Bill", 
-        amount: 75.30, 
-        type: "expense", 
-        category: "bills", 
+    {
+        id: 3,
+        name: "Electric Bill",
+        amount: 75.30,
+        type: "expense",
+        category: "bills",
         date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         notes: "May electricity bill"
     },
-    { 
-        id: 4, 
-        name: "Amazon Purchase", 
-        amount: 42.99, 
-        type: "expense", 
-        category: "shopping", 
+    {
+        id: 4,
+        name: "Amazon Purchase",
+        amount: 42.99,
+        type: "expense",
+        category: "shopping",
         date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         notes: "New book"
     },
-    { 
-        id: 5, 
-        name: "Dinner Out", 
-        amount: 35.75, 
-        type: "expense", 
-        category: "food", 
+    {
+        id: 5,
+        name: "Dinner Out",
+        amount: 35.75,
+        type: "expense",
+        category: "food",
         date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         notes: "Date night"
     }
 ];
+*/
+
 
 // Show loading spinner
 function showLoader() {
@@ -83,7 +90,7 @@ function hideLoader() {
 function showToast(message, type = 'success', duration = 3000) {
     toast.textContent = message;
     toast.className = `toast show ${type}`;
-    
+
     setTimeout(() => {
         toast.classList.remove('show');
     }, duration);
@@ -92,16 +99,16 @@ function showToast(message, type = 'success', duration = 3000) {
 
 // Format currency
 function formatCurrency(amount) {
-    return new Intl.NumberFormat('en-US', { 
-        style: 'currency', 
-        currency: 'USD' 
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
     }).format(amount);
 }
 
 // Format date
 function formatDate(dateString) {
-    const options = { 
-        month: 'short', 
+    const options = {
+        month: 'short',
         day: 'numeric',
         year: 'numeric'
     };
@@ -113,7 +120,7 @@ function getRelativeTime(dateString) {
     const now = new Date();
     const date = new Date(dateString);
     const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-    
+
     if (diffInDays === 0) return 'Today';
     if (diffInDays === 1) return 'Yesterday';
     if (diffInDays < 7) return `diffInDays days ago`;
@@ -123,7 +130,7 @@ function getRelativeTime(dateString) {
 
 // Get category icon
 function getCategoryIcon(category) {
-    switch(category) {
+    switch (category) {
         case 'food': return 'fa-utensils';
         case 'shopping': return 'fa-shopping-bag';
         case 'bills': return 'fa-file-invoice-dollar';
@@ -134,15 +141,16 @@ function getCategoryIcon(category) {
 }
 
 // Calculate totals
-function calculateTotals() {
-    const income = transactions
+
+function calculateTotals(data) {
+    const income = data
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + t.amount, 0);
-    
-    const expenses = transactions
+
+    const expenses = data
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
-    
+
     return {
         balance: income - expenses,
         income,
@@ -151,8 +159,8 @@ function calculateTotals() {
 }
 
 // Generate transaction list HTML
-function generateTransactionList() {
-    if (transactions.length === 0) {
+function generateTransactionList(data) {
+    if (data.length === 0) {
         return `
             <div class="empty-state">
                 <div class="empty-icon">
@@ -169,7 +177,7 @@ function generateTransactionList() {
 
     return `
         <ul class="transaction-list">
-            ${transactions.map(transaction => `
+            ${data.map(transaction => `
                 <li class="transaction-item" data-id="${transaction.id}">
                     <div class="transaction-info">
                         <div class="transaction-icon ${transaction.category}">
@@ -201,10 +209,58 @@ function generateTransactionList() {
     `;
 }
 
+// Apply saved theme preference on dashboard
+document.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.remove('dark-mode'); // fallback to light
+    }
+});
+
+
 // Dashboard content
-function getDashboardContent() {
+
+/*
+function getDashboardContent(transactions) {
     const totals = calculateTotals();
-    
+    const userName = currentUser || "User";
+
+    return `
+    <div class="header">
+        <h1 class="page-title">Dashboard</h1>
+        <div class="header-actions">
+            <div class="search-bar"><i class="fas fa-search"></i><input type="text" placeholder="Search transactions..." id="searchTransactions"></div>
+            <div class="user-profile">
+                <div class="user-avatar">${userName.slice(0, 2).toUpperCase()}</div>
+                <span class="user-name">${userName}</span>
+                <div class="user-dropdown">
+                    <a href="#" id="openSettings"><i class="fas fa-cog"></i> Settings</a>
+                    <a href="#" id="logoutUser"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="dashboard-cards">
+        <div class="card card-balance">
+            <div class="card-header"><h3>Total Balance</h3><div class="card-icon"><i class="fas fa-wallet"></i></div></div>
+            <div class="card-value">${formatCurrency(totals.balance)}</div>
+        </div>
+        <div class="card card-income">
+            <div class="card-header"><h3>Income</h3><div class="card-icon"><i class="fas fa-arrow-down"></i></div></div>
+            <div class="card-value">${formatCurrency(totals.income)}</div>
+        </div>
+        <div class="card card-expense">
+            <div class="card-header"><h3>Expenses</h3><div class="card-icon"><i class="fas fa-arrow-up"></i></div></div>
+            <div class="card-value">${formatCurrency(totals.expenses)}</div>
+        </div>
+    </div>`;
+}*/
+function getDashboardContent(transactions) {
+    const totals = calculateTotals(transactions);
+    const currentUser = localStorage.getItem('loggedInUser');
+
     return `
         <div class="header">
             <h1 class="page-title">Dashboard</h1>
@@ -214,12 +270,38 @@ function getDashboardContent() {
                     <input type="text" placeholder="Search transactions..." id="searchTransactions">
                 </div>
                 <div class="user-profile">
-                    <div class="user-avatar">JD</div>
-                    <span class="user-name">John Doe</span>
+                    <div class="user-avatar">${currentUser?.charAt(0).toUpperCase()}</div>
+                    <span class="user-name">${currentUser}</span>
                     <div class="user-dropdown">
-                        <a href="#"><i class="fas fa-user"></i> Profile</a>
-                        <a href="#"><i class="fas fa-cog"></i> Settings</a>
-                        <a href="#"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                        <a href="#" id="openSettings"><i class="fas fa-cog"></i> Settings</a>
+                        <a href="#" id="logoutUser"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        ...
+        ${generateTransactionList(transactions)}
+    `;
+}
+
+function getDashboardContent(transactions) {
+    const totals = calculateTotals(transactions);
+    const loggedInUser = localStorage.getItem('loggedInUser') || 'User';
+
+    return `
+        <div class="header">
+            <h1 class="page-title">Dashboard</h1>
+            <div class="header-actions">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search transactions..." id="searchTransactions">
+                </div>
+                <div class="user-profile">
+                    <div class="user-avatar">${loggedInUser.charAt(0).toUpperCase()}</div>
+                    <span class="user-name">${loggedInUser}</span>
+                    <div class="user-dropdown">
+                        <a href="#" id="openSettings"><i class="fas fa-cog"></i> Settings</a>
+                        <a href="#" id="logoutUser"><i class="fas fa-sign-out-alt"></i> Logout</a>
                     </div>
                 </div>
             </div>
@@ -234,9 +316,6 @@ function getDashboardContent() {
                     </div>
                 </div>
                 <div class="card-value">${formatCurrency(totals.balance)}</div>
-                <div class="card-footer positive">
-                    <i class="fas fa-arrow-up"></i> 12% from last month
-                </div>
             </div>
 
             <div class="card card-income">
@@ -247,9 +326,6 @@ function getDashboardContent() {
                     </div>
                 </div>
                 <div class="card-value">${formatCurrency(totals.income)}</div>
-                <div class="card-footer positive">
-                    <i class="fas fa-arrow-up"></i> 8% from last month
-                </div>
             </div>
 
             <div class="card card-expense">
@@ -260,45 +336,28 @@ function getDashboardContent() {
                     </div>
                 </div>
                 <div class="card-value">${formatCurrency(totals.expenses)}</div>
-                <div class="card-footer negative">
-                    <i class="fas fa-arrow-down"></i> 5% from last month
-                </div>
-            </div>
-        </div>
-
-        <div class="chart-container">
-            <div class="section-header">
-                <h2 class="section-title">Spending Overview</h2>
-                <div class="transaction-actions">
-                    <button class="btn btn-outline">
-                        <i class="fas fa-calendar"></i> This Month
-                    </button>
-                </div>
-            </div>
-            <div class="chart-placeholder">
-                <canvas id="spendingChart"></canvas>
             </div>
         </div>
 
         <div class="transactions-container">
             <div class="transactions-header">
                 <h2 class="section-title">Recent Transactions</h2>
-                <div class="transaction-actions">
-                    <button class="btn btn-outline">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
-                    <button class="btn btn-primary" id="addTransactionBtn">
-                        <i class="fas fa-plus"></i> Add Transaction
-                    </button>
-                </div>
             </div>
-            ${generateTransactionList()}
+            ${generateTransactionList(transactions)}
         </div>
+
+        <button class="floating-add-btn" id="addTransactionBtn">
+            <i class="fas fa-plus"></i>
+        </button>
     `;
 }
 
+
+
+
+
 // Transactions content
-function getTransactionsContent() {
+function getTransactionsContent(transactions = []) {
     return `
         <div class="header">
             <h1 class="page-title">Transactions</h1>
@@ -357,8 +416,9 @@ function getTransactionsContent() {
                     </select>
                 </div>
             </div>
-            
-            ${generateTransactionList()}
+
+            <!-- ✅ PASS transactions to the function -->
+            ${generateTransactionList(transactions)}
             
             <div class="pagination">
                 <button class="btn btn-outline" id="prevPageBtn">
@@ -372,6 +432,7 @@ function getTransactionsContent() {
         </div>
     `;
 }
+
 
 // Budgets content
 function getBudgetsContent() {
@@ -735,7 +796,13 @@ function getSettingsContent() {
 function loadPage(page) {
     showLoader();
     currentPage = page;
-    
+
+    // ✅ Get user and transactions before using them
+    const currentUser = localStorage.getItem('loggedInUser');
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+    const userData = users[currentUser] || {};
+    const transactions = userData.transactions || [];
+
     // Update active nav link
     navLinks.forEach(link => {
         link.classList.remove('active');
@@ -743,28 +810,35 @@ function loadPage(page) {
             link.classList.add('active');
         }
     });
-    
-    // Set page title
-    //pageTitle.textContent = page.charAt(0).toUpperCase() + page.slice(1);
-    const pageTitle = document.querySelector('.page-title');
-if (pageTitle) {
-    pageTitle.textContent = page.charAt(0).toUpperCase() + page.slice(1);
-}
 
-    
+    // Set page title
+    const pageTitle = document.querySelector('.page-title');
+    if (pageTitle) {
+        pageTitle.textContent = page.charAt(0).toUpperCase() + page.slice(1);
+    }
+
+    const themeToggle = document.getElementById("themeToggleBtn");
+    if (themeToggle) {
+        themeToggle.addEventListener("click", () => {
+            document.body.classList.toggle("dark-mode");
+            const isDark = document.body.classList.contains("dark-mode");
+            localStorage.setItem("theme", isDark ? "dark" : "light");
+        });
+    }
+
     // Simulate API call with timeout
     setTimeout(() => {
         let content = '';
-        
-        switch(page) {
+
+        switch (page) {
             case 'dashboard':
-                content = getDashboardContent();
+                content = getDashboardContent(userData.transactions || []);
                 break;
             case 'transactions':
-                content = getTransactionsContent();
+                content = getTransactionsContent(transactions);
                 break;
             case 'budgets':
-                content = getBudgetsContent();
+                content = getBudgetsContent(transactions);
                 break;
             case 'goals':
                 content = getGoalsContent();
@@ -776,13 +850,22 @@ if (pageTitle) {
                 content = getSettingsContent();
                 break;
             default:
-                content = getDashboardContent();
+                content = getDashboardContent(transactions);
         }
-        
+
         mainContent.innerHTML = content;
         hideLoader();
         setupPageEvents(); // Setup event listeners for the new content
     }, 500);
+
+    const logoutUser = document.getElementById('logoutUser');
+    if (logoutUser) {
+        logoutUser.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('loggedInUser');
+            window.location.href = 'index.html';
+        });
+    }
 }
 
 // Setup modal events
@@ -791,23 +874,23 @@ function setupModalEvents() {
     closeModalBtn.addEventListener('click', () => {
         transactionModal.classList.remove('active');
     });
-    
+
     // Close modal when clicking cancel button
     cancelTransactionBtn.addEventListener('click', () => {
         transactionModal.classList.remove('active');
     });
-    
+
     // Close modal when clicking outside
     transactionModal.addEventListener('click', (e) => {
         if (e.target === transactionModal) {
             transactionModal.classList.remove('active');
         }
     });
-    
+
     // Save transaction
     transactionForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        
+
         // Get form values
         const name = document.getElementById('transactionName').value;
         const amount = parseFloat(document.getElementById('transactionAmount').value);
@@ -815,7 +898,7 @@ function setupModalEvents() {
         const category = document.getElementById('transactionCategory').value;
         const date = document.getElementById('transactionDate').value;
         const notes = document.getElementById('transactionNotes').value;
-        
+
         // Create new transaction
         const newTransaction = {
             id: transactions.length + 1,
@@ -826,17 +909,19 @@ function setupModalEvents() {
             date,
             notes
         };
-        
+
         // Add to transactions array
         transactions.unshift(newTransaction);
+        users[currentUser].transactions = transactions;
+        localStorage.setItem('users', JSON.stringify(users));
         
         // Close modal and reset form
         transactionModal.classList.remove('active');
         transactionForm.reset();
-        
+
         // Reload current page to show changes
         loadPage(currentPage);
-        
+
         // Show success message
         showToast('Transaction added successfully!', 'success');
     });
@@ -845,6 +930,24 @@ function setupModalEvents() {
 // Setup event listeners for the current page
 function setupPageEvents() {
     // Navigation links
+    const openSettings = document.getElementById('openSettings');
+if (openSettings) {
+    openSettings.addEventListener('click', (e) => {
+        e.preventDefault();
+        loadPage('settings'); // assuming 'settings' triggers the settings page render
+    });
+
+    const logoutUser = document.getElementById('logoutUser');
+if (logoutUser) {
+    logoutUser.addEventListener('click', (e) => {
+        e.preventDefault();
+        localStorage.removeItem('loggedInUser');
+        window.location.href = 'index.html';
+    });
+}
+
+}
+
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
@@ -854,7 +957,7 @@ function setupPageEvents() {
             }
         });
     });
-    
+
     // Add transaction button (if exists on this page)
     const addTransactionBtn = document.getElementById('addTransactionBtn');
     if (addTransactionBtn) {
@@ -862,12 +965,12 @@ function setupPageEvents() {
             // Reset form and set default date
             transactionForm.reset();
             document.getElementById('transactionDate').valueAsDate = new Date();
-            
+
             // Show modal
             transactionModal.classList.add('active');
         });
     }
-    
+
     // Add first transaction button (empty state)
     const addFirstTransactionBtn = document.getElementById('addFirstTransactionBtn');
     if (addFirstTransactionBtn) {
@@ -875,12 +978,12 @@ function setupPageEvents() {
             // Reset form and set default date
             transactionForm.reset();
             document.getElementById('transactionDate').valueAsDate = new Date();
-            
+
             // Show modal
             transactionModal.classList.add('active');
         });
     }
-    
+
     // Add budget button (if exists on this page)
     const addBudgetBtn = document.getElementById('addBudgetBtn');
     if (addBudgetBtn) {
@@ -888,7 +991,7 @@ function setupPageEvents() {
             showToast('Add budget modal would open here', 'success');
         });
     }
-    
+
     // Add another budget button
     const addAnotherBudgetBtn = document.getElementById('addAnotherBudgetBtn');
     if (addAnotherBudgetBtn) {
@@ -896,7 +999,7 @@ function setupPageEvents() {
             showToast('Add budget modal would open here', 'success');
         });
     }
-    
+
     // Add goal button (if exists on this page)
     const addGoalBtn = document.getElementById('addGoalBtn');
     if (addGoalBtn) {
@@ -904,7 +1007,7 @@ function setupPageEvents() {
             showToast('Add goal modal would open here', 'success');
         });
     }
-    
+
     // Add first goal button (empty state)
     const addFirstGoalBtn = document.getElementById('addFirstGoalBtn');
     if (addFirstGoalBtn) {
@@ -912,7 +1015,7 @@ function setupPageEvents() {
             showToast('Add goal modal would open here', 'success');
         });
     }
-    
+
     // Goal menu buttons
     for (let i = 1; i <= 3; i++) {
         const goalMenuBtn = document.getElementById(`goalMenuBtn${i}`);
@@ -922,17 +1025,20 @@ function setupPageEvents() {
             });
         }
     }
+
+
     
+
     // Transaction edit/delete buttons
     document.querySelectorAll('.transaction-item .action-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const transactionId = btn.closest('.transaction-item').dataset.id;
-            
+
             if (btn.classList.contains('edit')) {
                 // Find transaction
                 const transaction = transactions.find(t => t.id == transactionId);
-                
+
                 if (transaction) {
                     // Fill form with transaction data
                     document.getElementById('transactionName').value = transaction.name;
@@ -941,10 +1047,10 @@ function setupPageEvents() {
                     document.getElementById('transactionCategory').value = transaction.category;
                     document.getElementById('transactionDate').value = transaction.date;
                     document.getElementById('transactionNotes').value = transaction.notes || '';
-                    
+
                     // Change save button text
                     document.getElementById('saveTransactionBtn').textContent = 'Update Transaction';
-                    
+
                     // Show modal
                     transactionModal.classList.add('active');
                 }
@@ -952,17 +1058,17 @@ function setupPageEvents() {
                 if (confirm('Are you sure you want to delete this transaction?')) {
                     // Remove transaction from array
                     transactions = transactions.filter(t => t.id != transactionId);
-                    
+
                     // Reload current page
                     loadPage(currentPage);
-                    
+
                     // Show success message
                     showToast('Transaction deleted successfully!', 'success');
                 }
             }
         });
     });
-    
+
     // Transaction item click
     document.querySelectorAll('.transaction-item').forEach(item => {
         item.addEventListener('click', () => {
@@ -970,7 +1076,7 @@ function setupPageEvents() {
             showToast(`Viewing details for transaction #${transactionId}`, 'success');
         });
     });
-    
+
     // Settings tabs
     document.querySelectorAll('.settings-tab').forEach(tab => {
         tab.addEventListener('click', () => {
@@ -979,7 +1085,7 @@ function setupPageEvents() {
             showToast(`Switched to ${tab.textContent} settings`, 'success');
         });
     });
-    
+
     // Report tabs
     document.querySelectorAll('.report-tab').forEach(tab => {
         tab.addEventListener('click', () => {
@@ -988,12 +1094,12 @@ function setupPageEvents() {
             showToast(`Switched to ${tab.textContent} report`, 'success');
         });
     });
-    
+
     // Filter changes (transactions page)
     const filterType = document.getElementById('filterType');
     const filterCategory = document.getElementById('filterCategory');
     const filterDateRange = document.getElementById('filterDateRange');
-    
+
     if (filterType && filterCategory && filterDateRange) {
         [filterType, filterCategory, filterDateRange].forEach(filter => {
             filter.addEventListener('change', () => {
@@ -1002,23 +1108,23 @@ function setupPageEvents() {
             });
         });
     }
-    
+
     // Pagination buttons
     const prevPageBtn = document.getElementById('prevPageBtn');
     const nextPageBtn = document.getElementById('nextPageBtn');
-    
+
     if (prevPageBtn) {
         prevPageBtn.addEventListener('click', () => {
             showToast('Loading previous page...', 'success');
         });
     }
-    
+
     if (nextPageBtn) {
         nextPageBtn.addEventListener('click', () => {
             showToast('Loading next page...', 'success');
         });
     }
-    
+
     // Settings form
     const accountSettingsForm = document.getElementById('accountSettingsForm');
     if (accountSettingsForm) {
@@ -1027,7 +1133,7 @@ function setupPageEvents() {
             showToast('Account settings saved!', 'success');
         });
     }
-    
+
     // Cancel settings button
     const cancelSettingsBtn = document.getElementById('cancelSettingsBtn');
     if (cancelSettingsBtn) {
@@ -1035,7 +1141,7 @@ function setupPageEvents() {
             showToast('Changes discarded', 'error');
         });
     }
-    
+
     // Change avatar button
     const changeAvatarBtn = document.getElementById('changeAvatarBtn');
     if (changeAvatarBtn) {
@@ -1049,14 +1155,23 @@ function setupPageEvents() {
 function initApp() {
     // Setup modal events
     setupModalEvents();
-    
+
     // Load dashboard by default
     loadPage('dashboard');
-    
+
     // Show welcome toast
     setTimeout(() => {
         showToast('Welcome to Spending Tracker!', 'success', 4000);
     }, 1000);
+
+    // Apply saved theme
+const savedTheme = localStorage.getItem("theme");
+if (savedTheme === "dark") {
+    document.body.classList.add("dark-mode");
+} else {
+    document.body.classList.remove("dark-mode");
+}
+
 }
 
 // Start the app when DOM is loaded

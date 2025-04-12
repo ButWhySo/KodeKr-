@@ -10,6 +10,11 @@
 </head>
 <body>
 
+  <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle Theme">
+    <i class="fas fa-moon"></i>
+  </button>
+  
+<!--
   <div class="login-container">
     <h2>Spending Tracker Login</h2>
     <form id="loginForm">
@@ -28,7 +33,31 @@
     <a href="#" id="toggleLogin" style="display:none;">Already have an account? Login</a>
     
   </div>
+-->
 
+<div class="auth-container">
+    <h2 id="formTitle">Login</h2>
+  
+    <form id="authForm">
+      <div class="input-group" id="usernameGroup">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="Enter your username" required />
+      </div>
+  
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Enter your password" required />
+      </div>
+  
+      <button type="submit" id="submitBtn">Login</button>
+    </form>
+  
+    <div class="toggle-form">
+      <span id="toggleText">Don't have an account?</span>
+      <a id="toggleLink">Register</a>
+    </div>
+  </div>
+  
   <script src="./js/auth.js"></script>
 </body>
 </html>

@@ -1,81 +1,71 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
-    const toggleRegister = document.getElementById('toggleRegister');
-    const toggleLogin = document.getElementById('toggleLogin');
+    const authForm = document.getElementById('authForm');
+    const formTitle = document.getElementById('formTitle');
+    const submitBtn = document.getElementById('submitBtn');
+    const toggleLink = document.getElementById('toggleLink');
+    const toggleText = document.getElementById('toggleText');
+    const themeToggleBtn = document.getElementById("themeToggleBtn");
 
-    if (!loginForm || !registerForm || !toggleRegister || !toggleLogin) {
-        console.error("Login/Register form elements not found!");
-        return;
+    let isLogin = true;
+
+    // 🌗 Apply saved theme on load
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+        document.body.classList.add("dark-mode");
     }
 
-    // Switch to register view
-    toggleRegister.addEventListener('click', (e) => {
-        e.preventDefault();
-        loginForm.style.display = 'none';
-        registerForm.style.display = 'block';
-        toggleRegister.style.display = 'none';
-        toggleLogin.style.display = 'block';
+    // 🌗 Theme toggle functionality
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener("click", () => {
+            document.body.classList.toggle("dark-mode");
+            const isDark = document.body.classList.contains("dark-mode");
+            localStorage.setItem("theme", isDark ? "dark" : "light");
+        });
+    }
+
+    // 🔁 Toggle login/register mode
+    toggleLink.addEventListener('click', () => {
+        isLogin = !isLogin;
+        formTitle.textContent = isLogin ? 'Login' : 'Register';
+        submitBtn.textContent = isLogin ? 'Login' : 'Register';
+        toggleText.textContent = isLogin ? "Don't have an account?" : "Already have an account?";
+        toggleLink.textContent = isLogin ? "Register" : "Login";
     });
 
-    // Switch to login view
-    toggleLogin.addEventListener('click', (e) => {
-        e.preventDefault();
-        loginForm.style.display = 'block';
-        registerForm.style.display = 'none';
-        toggleRegister.style.display = 'block';
-        toggleLogin.style.display = 'none';
-    });
-
-    // Handle login
-    loginForm.addEventListener('submit', (e) => {
+    // 🔐 Handle login/register submission
+    authForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value.trim();
+        let users = JSON.parse(localStorage.getItem('users') || '{}');
 
-        const users = JSON.parse(localStorage.getItem('users') || '{}');
-
-        if (users[username] && users[username].password === password) {
-            localStorage.setItem('loggedInUser', username);
-            window.location.href = 'dashboard.html'; // or index.html
+        if (isLogin) {
+            if (users[username] && users[username].password === password) {
+                localStorage.setItem('loggedInUser', username);
+                window.location.href = 'dashboard.html';
+            } else {
+                alert('Invalid username or password!');
+            }
         } else {
-            alert('Invalid username or password');
-        }
-    });
-
-    // Handle registration
-    registerForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = document.getElementById('regUsername').value.trim();
-        const password = document.getElementById('regPassword').value.trim();
-
-        const users = JSON.parse(localStorage.getItem('users') || '{}');
-
-        if (users[username]) {
-            alert('User already exists!');
-            return;
+            if (users[username]) {
+                alert('User already exists!');
+            } else {
+                users[username] = {
+                    password,
+                    transactions: []
+                };
+                localStorage.setItem('users', JSON.stringify(users));
+                alert('Registration successful!');
+                toggleLink.click();
+            }
         }
 
-        // Save new user
-        users[username] = {
-            password,
-            transactions: [] // This holds cash flow per user
-        };
-
-        localStorage.setItem('users', JSON.stringify(users));
-        alert('Registration successful! Please log in.');
-
-        // Redirect to login
-        registerForm.reset();
-        registerForm.style.display = 'none';
-        loginForm.style.display = 'block';
-        toggleRegister.style.display = 'block';
-        toggleLogin.style.display = 'none';
+        authForm.reset();
     });
 
-    // Auto-redirect if already logged in
+    // 🚪 Auto-redirect if already logged in
     const currentUser = localStorage.getItem('loggedInUser');
     if (currentUser && window.location.pathname.includes('login')) {
-        window.location.href = 'dashboard.html'; // or index.html
+        window.location.href = 'dashboard.html';
     }
 });

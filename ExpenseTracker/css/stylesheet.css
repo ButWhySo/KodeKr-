@@ -721,3 +721,44 @@ body {
         padding: 1.5rem;
     }
 }
+
+body.dark-mode {
+    background-color: #121212;
+    color: #f1f1f1;
+  }
+  
+  body.dark-mode .card,
+  body.dark-mode .transactions-container,
+  body.dark-mode .chart-container {
+    background-color: #1e1e1e;
+    color: #ffffff;
+  }
+  
+  body.dark-mode .btn-outline {
+    border-color: #888;
+    color: #f1f1f1;
+  }
+  
+
+  /* 🌑 Dark Mode Styling */
+body.dark-mode {
+    background-color: #1e1e2f;
+    color: #f1f1f1;
+}
+
+body.dark-mode .sidebar {
+    background-color: #2c2c3e;
+    box-shadow: 5px 0 15px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .nav-link {
+    color: #ccc;
+}
+
+body.dark-mode .nav-link:hover,
+body.dark-mode .nav-link.active {
+    background-color: rgba(162, 155, 254, 0.1);
+    color: var(--primary-light);
+}
+
+body.dark-mode .logo
