@@ -257,9 +257,12 @@ function getDashboardContent(transactions) {
         </div>
     </div>`;
 }*/
-function getDashboardContent(transactions) {
-    const totals = calculateTotals(transactions);
+function getDashboardContent(filteredTransactions) {
     const currentUser = localStorage.getItem('loggedInUser');
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+    const allTransactions = users[currentUser]?.transactions || [];
+
+    const totals = calculateTotals(allTransactions); // Always use full data for totals
 
     return `
         <div class="header">
@@ -279,10 +282,52 @@ function getDashboardContent(transactions) {
                 </div>
             </div>
         </div>
-        ...
-        ${generateTransactionList(transactions)}
+
+        <div class="dashboard-cards">
+            <div class="card card-balance">
+                <div class="card-header">
+                    <h3 class="card-title">Total Balance</h3>
+                    <div class="card-icon">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                </div>
+                <div class="card-value">${formatCurrency(totals.balance)}</div>
+            </div>
+
+            <div class="card card-income">
+                <div class="card-header">
+                    <h3 class="card-title">Income</h3>
+                    <div class="card-icon">
+                        <i class="fas fa-arrow-down"></i>
+                    </div>
+                </div>
+                <div class="card-value">${formatCurrency(totals.income)}</div>
+            </div>
+
+            <div class="card card-expense">
+                <div class="card-header">
+                    <h3 class="card-title">Expenses</h3>
+                    <div class="card-icon">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                </div>
+                <div class="card-value">${formatCurrency(totals.expenses)}</div>
+            </div>
+        </div>
+
+        <div class="transactions-container">
+            <div class="transactions-header">
+                <h2 class="section-title">Recent Transactions</h2>
+            </div>
+            ${generateTransactionList(filteredTransactions)}
+        </div>
+
+        <button class="floating-add-btn" id="addTransactionBtn">
+            <i class="fas fa-plus"></i>
+        </button>
     `;
 }
+
 
 function getDashboardContent(transactions) {
     const totals = calculateTotals(transactions);
@@ -1150,6 +1195,42 @@ if (logoutUser) {
         });
     }
 }
+
+// 🔍 Live search transactions by any parameter
+// 🔍 Live search transactions by any parameter (fixed)
+document.addEventListener('input', function (e) {
+    if (e.target && e.target.id === 'searchTransactions') {
+        const searchQuery = e.target.value.toLowerCase();
+        const currentUser = localStorage.getItem('loggedInUser');
+        const users = JSON.parse(localStorage.getItem('users') || '{}');
+        const userData = users[currentUser] || {};
+        const allTransactions = userData.transactions || [];
+
+        const filtered = allTransactions.filter(t =>
+            Object.values(t).some(value =>
+                String(value).toLowerCase().includes(searchQuery)
+            )
+        );
+
+        const inputVal = e.target.value;
+
+        if (currentPage === 'dashboard') {
+            mainContent.innerHTML = getDashboardContent(filtered);
+        } else if (currentPage === 'transactions') {
+            mainContent.innerHTML = getTransactionsContent(filtered);
+        }
+
+        setupPageEvents();
+
+        const newInput = document.getElementById('searchTransactions');
+        if (newInput) {
+            newInput.value = inputVal;
+            newInput.focus(); // optional: keep cursor focus
+        }
+    }
+});
+
+
 
 // Initialize the app
 function initApp() {
