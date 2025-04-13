@@ -621,191 +621,377 @@ function getBudgetsContent() {
     const transactions = users[currentUser]?.transactions || [];
     
     // Calculate monthly spending by category
-    const monthlySpending = {};
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
     
-    transactions.forEach(tx => {
-        const txDate = new Date(tx.date);
-        if (tx.type === 'expense' && txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) {
-            monthlySpending[tx.category] = (monthlySpending[tx.category] || 0) + tx.amount;
+    const monthlyTransactions = transactions.filter(t => {
+        const transactionDate = new Date(t.date);
+        return transactionDate.getMonth() === currentMonth && 
+               transactionDate.getFullYear() === currentYear && 
+               t.type === 'expense';
+    });
+    
+    const spendingByCategory = {};
+    monthlyTransactions.forEach(t => {
+        if (!spendingByCategory[t.category]) {
+            spendingByCategory[t.category] = 0;
         }
+        spendingByCategory[t.category] += t.amount;
     });
     
     return `
-        <div class="header">
-        <h1 class="page-title">Budgets & Calculators</h1>
-            <div class="header-actions">
+        <div class="page-header">
+            <h1>Budgets & Calculators</h1>
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="budgets">Budgets</button>
+                <button class="tab-btn" data-tab="calculators">Calculators</button>
+                </div>
+        </div>
+        
+        <div class="tab-content active" id="budgets-tab">
+            <div class="budget-header">
+                <h2>Monthly Budgets</h2>
                 <button class="btn btn-primary" id="addBudgetBtn">
-                <i class="fas fa-plus"></i> Add Budget
+                    <i class="fas fa-plus"></i> Add Budget
                 </button>
-            </div>
         </div>
 
         <div class="budgets-container">
-        <div class="budget-tabs">
-            <button class="budget-tab active" data-tab="budgets">Budgets</button>
-            <button class="budget-tab" data-tab="calculators">Calculators</button>
-                </div>
-        
-        <div class="budget-content">
-            <div class="budget-section active" id="budgets-section">
                 ${budgets.length === 0 ? `
                     <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="fas fa-chart-pie"></i>
-            </div>
-                        <h3 class="empty-title">No budgets set</h3>
-                        <p class="empty-text">Create a budget to track your spending limits</p>
+                        <i class="fas fa-chart-pie"></i>
+                        <p>No budgets set yet. Create your first budget to start tracking your spending.</p>
                         <button class="btn btn-primary" id="createFirstBudgetBtn">
-                            <i class="fas fa-plus"></i> Create Budget
-                        </button>
-                    </div>
+                            <i class="fas fa-plus"></i> Create First Budget
+                    </button>
+                </div>
                 ` : `
-                    <div class="budgets-grid">
+                    <div class="budget-grid">
                         ${budgets.map(budget => {
-                            const spent = monthlySpending[budget.category] || 0;
-                            const percentage = Math.min((spent / budget.limit) * 100, 100);
-                            const status = percentage >= 100 ? 'exceeded' : percentage >= 80 ? 'warning' : 'good';
+                            const spent = spendingByCategory[budget.category] || 0;
+                            const percentage = Math.min((spent / budget.amount) * 100, 100);
+                            const statusClass = percentage >= 100 ? 'danger' : 
+                                               percentage >= 80 ? 'warning' : 'success';
                             
                             return `
-                                <div class="budget-card ${status}" data-id="${budget.id}">
+                                <div class="budget-card" data-id="${budget.id}">
                     <div class="budget-header">
-                                        <h3>${budget.category}</h3>
-                                        <div class="budget-icon ${budget.category.toLowerCase()}">
+                                        <div class="budget-icon">
                                             <i class="fas ${getCategoryIcon(budget.category)}"></i>
+                                        </div>
+                                        <div class="budget-title">
+                                            <h3>${budget.category.charAt(0).toUpperCase() + budget.category.slice(1)}</h3>
+                                            <p>${formatCurrency(budget.amount)} / month</p>
+                                        </div>
+                                        <div class="budget-actions">
+                                            <button class="action-btn edit" title="Edit Budget">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="action-btn delete" title="Delete Budget">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                         </div>
                     </div>
                     <div class="budget-progress">
                                         <div class="progress-bar">
-                                            <div class="progress" style="width: ${percentage}%"></div>
-                                        </div>
-                                        <div class="budget-amounts">
-                                            <span>${formatCurrency(spent)} / ${formatCurrency(budget.limit)}</span>
-                                            <span class="budget-percentage">${Math.round(percentage)}%</span>
-                                        </div>
+                                            <div class="progress-fill ${statusClass}" style="width: ${percentage}%"></div>
                     </div>
-                    <div class="budget-footer">
-                                        <span class="budget-period">${budget.period}</span>
-                                        <div class="budget-actions">
-                                            <button class="action-btn edit" data-id="${budget.id}">
-                                                <i class="fas fa-pencil-alt"></i>
-                                            </button>
-                                            <button class="action-btn delete" data-id="${budget.id}">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                        <div class="progress-stats">
+                                            <span>${formatCurrency(spent)} spent</span>
+                                            <span>${formatCurrency(budget.amount - spent)} remaining</span>
                     </div>
-                                    </div>
-                                </div>
+                </div>
+                    </div>
                             `;
                         }).join('')}
                     </div>
                 `}
-                </div>
-                
-            <div class="budget-section" id="calculators-section">
-                <div class="calculators-grid">
-                    <div class="calculator-card">
-                        <h3>EMI Calculator</h3>
-                        <div class="calculator-form">
-                            <div class="form-group">
-                                <label>Loan Amount</label>
-                                <input type="number" id="loanAmount" class="form-control" placeholder="Enter loan amount">
-                    </div>
-                            <div class="form-group">
-                                <label>Interest Rate (% per year)</label>
-                                <input type="number" id="interestRate" class="form-control" placeholder="Enter interest rate">
-                    </div>
-                            <div class="form-group">
-                                <label>Loan Term (years)</label>
-                                <input type="number" id="loanTerm" class="form-control" placeholder="Enter loan term">
-                    </div>
-                            <button class="btn btn-primary" id="calculateEMI">Calculate EMI</button>
-                </div>
-                        <div class="calculator-result" id="emiResult" style="display: none;">
-                            <div class="result-item">
-                                <span>Monthly EMI:</span>
-                                <span id="monthlyEMI">$0</span>
-                    </div>
-                            <div class="result-item">
-                                <span>Total Interest:</span>
-                                <span id="totalInterest">$0</span>
-                    </div>
-                            <div class="result-item">
-                                <span>Total Payment:</span>
-                                <span id="totalPayment">$0</span>
-                            </div>
                     </div>
                 </div>
                 
-                    <div class="calculator-card">
-                        <h3>Tax Calculator</h3>
-                        <div class="calculator-form">
-                            <div class="form-group">
-                                <label>Annual Income</label>
-                                <input type="number" id="annualIncome" class="form-control" placeholder="Enter annual income">
+        <div class="tab-content" id="calculators-tab">
+            <div class="calculators-container">
+                <div class="calculator-card">
+                    <h3>EMI Calculator</h3>
+                    <form id="emiCalculatorForm">
+                        <div class="form-group">
+                            <label for="loanAmount">Loan Amount</label>
+                            <input type="number" id="loanAmount" class="form-control" required min="0" step="1">
                     </div>
-                            <div class="form-group">
-                                <label>Tax Year</label>
-                                <select id="taxYear" class="form-control">
-                                    <option value="2024">2024</option>
-                                    <option value="2023">2023</option>
-                                </select>
+                        <div class="form-group">
+                            <label for="interestRate">Interest Rate (%)</label>
+                            <input type="number" id="interestRate" class="form-control" required min="0" step="0.1">
                     </div>
-                            <button class="btn btn-primary" id="calculateTax">Calculate Tax</button>
+                        <div class="form-group">
+                            <label for="loanTerm">Loan Term (Years)</label>
+                            <input type="number" id="loanTerm" class="form-control" required min="1" >
                     </div>
-                        <div class="calculator-result" id="taxResult" style="display: none;">
-                            <div class="result-item">
-                                <span>Estimated Tax:</span>
-                                <span id="estimatedTax">$0</span>
-                            </div>
-                            <div class="result-item">
-                                <span>Effective Tax Rate:</span>
-                                <span id="effectiveTaxRate">0%</span>
-                            </div>
-                            <div class="result-item">
-                                <span>Take Home Pay:</span>
-                                <span id="takeHomePay">$0</span>
-                            </div>
+                        <button type="submit" class="btn btn-primary">Calculate EMI</button>
+                    </form>
+                    <div id="emiResult" class="calculator-result"></div>
+                </div>
+                
+                <div class="calculator-card">
+                    <h3>Tax Calculator</h3>
+                    <form id="taxCalculatorForm">
+                        <div class="form-group">
+                            <label for="annualIncome">Annual Income</label>
+                            <input type="number" id="annualIncome" class="form-control" required min="0" step="1">
+                    </div>
+                        <div class="form-group">
+                            <label for="taxRate">Tax Rate (%)</label>
+                            <input type="number" id="taxRate" class="form-control" required min="0" step="0.1">
+                    </div>
+                        <button type="submit" class="btn btn-primary">Calculate Tax</button>
+                    </form>
+                    <div id="taxResult" class="calculator-result"></div>
+                    </div>
+                
+                <div class="calculator-card">
+                    <h3>Savings Goal Calculator</h3>
+                    <form id="savingsCalculatorForm">
+                        <div class="form-group">
+                            <label for="targetAmount">Target Amount</label>
+                            <input type="number" id="targetAmount" class="form-control" required min="0" step="1">
+                </div>
+                        <div class="form-group">
+                            <label for="timeframe">Timeframe (Months)</label>
+                            <input type="number" id="timeframe" class="form-control" required min="1" >
+            </div>
+                        <div class="form-group">
+                            <label for="interestRateSavings">Interest Rate (%)</label>
+                            <input type="number" id="interestRateSavings" class="form-control" required min="0" step="0.1">
+        </div>
+                        <button type="submit" class="btn btn-primary">Calculate Savings</button>
+                    </form>
+                    <div id="savingsResult" class="calculator-result"></div>
                 </div>
             </div>
+        </div>
+        
+        <style>
+            .page-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1.5rem;
+            }
             
-                    <div class="calculator-card">
-                        <h3>Savings Goal Calculator</h3>
-                        <div class="calculator-form">
-                            <div class="form-group">
-                                <label>Target Amount</label>
-                                <input type="number" id="targetAmount" class="form-control" placeholder="Enter target amount">
-                            </div>
-                            <div class="form-group">
-                                <label>Time Period (months)</label>
-                                <input type="number" id="timePeriod" class="form-control" placeholder="Enter time period">
-                            </div>
-                            <div class="form-group">
-                                <label>Interest Rate (% per year)</label>
-                                <input type="number" id="savingsInterestRate" class="form-control" placeholder="Enter interest rate">
-                            </div>
-                            <button class="btn btn-primary" id="calculateSavings">Calculate Savings</button>
-                        </div>
-                        <div class="calculator-result" id="savingsResult" style="display: none;">
-                            <div class="result-item">
-                                <span>Monthly Savings Needed:</span>
-                                <span id="monthlySavings">$0</span>
-                            </div>
-                            <div class="result-item">
-                                <span>Total Interest Earned:</span>
-                                <span id="totalInterestEarned">$0</span>
-                            </div>
-                            <div class="result-item">
-                                <span>Total Contributions:</span>
-                                <span id="totalContributions">$0</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        </div>
+            .tab-buttons {
+                display: flex;
+                gap: 0.5rem;
+                background: var(--card-bg);
+                padding: 0.25rem;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            
+            .tab-btn {
+                padding: 0.5rem 1rem;
+                border: none;
+                background: transparent;
+                color: var(--text-color);
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            }
+            
+            .tab-btn.active {
+                background: var(--primary-color);
+                color: white;
+            }
+            
+            .tab-content {
+                display: none;
+            }
+            
+            .tab-content.active {
+                display: block;
+            }
+            
+            .budget-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 1.5rem;
+            }
+            
+            .budget-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 1rem;
+            }
+            
+            .budget-card {
+                background: var(--card-bg);
+                border-radius: 8px;
+                padding: 1rem;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            
+            .budget-card .budget-header {
+                display: flex;
+                align-items: center;
+                margin-bottom: 1rem;
+            }
+            
+            .budget-icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: var(--primary-color);
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-right: 1rem;
+            }
+            
+            .budget-title {
+                flex: 1;
+            }
+            
+            .budget-title h3 {
+                margin: 0;
+                font-size: 1.1rem;
+            }
+            
+            .budget-title p {
+                margin: 0;
+                color: var(--text-muted);
+                font-size: 0.9rem;
+            }
+            
+            .budget-actions {
+                display: flex;
+                gap: 0.5rem;
+            }
+            
+            .budget-progress {
+                margin-top: 1rem;
+            }
+            
+            .progress-bar {
+                height: 8px;
+                background: var(--border-color);
+                border-radius: 4px;
+                overflow: hidden;
+                margin-bottom: 0.5rem;
+            }
+            
+            .progress-fill {
+                height: 100%;
+                border-radius: 4px;
+                transition: width 0.3s ease;
+            }
+            
+            .progress-fill.success {
+                background: var(--success-color);
+            }
+            
+            .progress-fill.warning {
+                background: var(--warning-color);
+            }
+            
+            .progress-fill.danger {
+                background: var(--danger-color);
+            }
+            
+            .progress-stats {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.9rem;
+                color: var(--text-muted);
+            }
+            
+            .empty-state {
+                text-align: center;
+                padding: 2rem;
+                background: var(--card-bg);
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            
+            .empty-state i {
+                font-size: 3rem;
+                color: var(--text-muted);
+                margin-bottom: 1rem;
+            }
+            
+            .empty-state p {
+                color: var(--text-muted);
+                margin-bottom: 1.5rem;
+            }
+            
+            .calculators-container {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 1.5rem;
+            }
+            
+            .calculator-card {
+                background: var(--card-bg);
+                border-radius: 8px;
+                padding: 1.5rem;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            
+            .calculator-card h3 {
+                margin-top: 0;
+                margin-bottom: 1.5rem;
+                color: var(--text-color);
+            }
+            
+            .calculator-result {
+                margin-top: 1.5rem;
+                padding: 1rem;
+                background: var(--bg-color);
+                border-radius: 6px;
+                display: none;
+            }
+            
+            .calculator-result.active {
+                display: block;
+            }
+            
+            .form-group {
+                margin-bottom: 1rem;
+            }
+            
+            .form-group label {
+                display: block;
+                margin-bottom: 0.5rem;
+                color: var(--text-color);
+            }
+            
+            .form-control {
+                width: 100%;
+                padding: 0.5rem;
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                background: var(--input-bg);
+                color: var(--text-color);
+            }
+            
+            .btn {
+                padding: 0.5rem 1rem;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            }
+            
+            .btn-primary {
+                background: var(--primary-color);
+                color: white;
+                border: none;
+            }
+            
+            .btn:hover {
+                opacity: 0.9;
+            }
+        </style>
     `;
 }
 
@@ -2045,114 +2231,300 @@ if (filterType && filterCategory && filterDateRange) {
     }
 
     // EMI Calculator
-    const calculateEMIBtn = document.getElementById('calculateEMI');
-    if (calculateEMIBtn) {
-        calculateEMIBtn.addEventListener('click', () => {
-            const loanAmount = parseFloat(document.getElementById('loanAmount').value) || 0;
-            const interestRate = parseFloat(document.getElementById('interestRate').value) || 0;
-            const loanTerm = parseFloat(document.getElementById('loanTerm').value) || 0;
+    const emiCalculatorForm = document.getElementById('emiCalculatorForm');
+    if (emiCalculatorForm) {
+        emiCalculatorForm.addEventListener('submit', (e) => {
+            e.preventDefault();
             
-            if (loanAmount && interestRate && loanTerm) {
-                const monthlyRate = interestRate / 12 / 100;
-                const numberOfPayments = loanTerm * 12;
-                
-                const monthlyEMI = loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments) / 
-                                  (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
-                
-                const totalPayment = monthlyEMI * numberOfPayments;
-                const totalInterest = totalPayment - loanAmount;
-                
-                document.getElementById('monthlyEMI').textContent = formatCurrency(monthlyEMI);
-                document.getElementById('totalInterest').textContent = formatCurrency(totalInterest);
-                document.getElementById('totalPayment').textContent = formatCurrency(totalPayment);
-                document.getElementById('emiResult').style.display = 'block';
-                
-                showToast('EMI calculated successfully', 'success');
-            } else {
-                showToast('Please fill all fields', 'error');
-            }
+            const loanAmount = parseFloat(document.getElementById('loanAmount').value);
+            const interestRate = parseFloat(document.getElementById('interestRate').value);
+            const loanTerm = parseInt(document.getElementById('loanTerm').value);
+            
+            // Calculate EMI
+            const monthlyRate = interestRate / 12 / 100;
+            const numberOfPayments = loanTerm * 12;
+            const emi = loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments) / (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
+            const totalPayment = emi * numberOfPayments;
+            const totalInterest = totalPayment - loanAmount;
+            
+            // Display result
+            const emiResult = document.getElementById('emiResult');
+            emiResult.innerHTML = `
+                <h4>EMI Calculation Result</h4>
+                <div class="result-item">
+                    <span>Monthly EMI:</span>
+                    <strong>${formatCurrency(emi)}</strong>
+                </div>
+                <div class="result-item">
+                    <span>Total Payment:</span>
+                    <strong>${formatCurrency(totalPayment)}</strong>
+                </div>
+                <div class="result-item">
+                    <span>Total Interest:</span>
+                    <strong>${formatCurrency(totalInterest)}</strong>
+                </div>
+            `;
+            emiResult.classList.add('active');
         });
     }
 
     // Tax Calculator
-    const calculateTaxBtn = document.getElementById('calculateTax');
-    if (calculateTaxBtn) {
-        calculateTaxBtn.addEventListener('click', () => {
-            const annualIncome = parseFloat(document.getElementById('annualIncome').value) || 0;
+    const taxCalculatorForm = document.getElementById('taxCalculatorForm');
+    if (taxCalculatorForm) {
+        taxCalculatorForm.addEventListener('submit', (e) => {
+            e.preventDefault();
             
-            if (annualIncome) {
-                // Simplified tax calculation (can be expanded with actual tax brackets)
-                let estimatedTax = 0;
-                
-                if (annualIncome <= 11000) {
-                    estimatedTax = annualIncome * 0.10;
-                } else if (annualIncome <= 44725) {
-                    estimatedTax = 1100 + (annualIncome - 11000) * 0.12;
-                } else if (annualIncome <= 95375) {
-                    estimatedTax = 5147 + (annualIncome - 44725) * 0.22;
-                } else if (annualIncome <= 182100) {
-                    estimatedTax = 16290 + (annualIncome - 95375) * 0.24;
-                } else if (annualIncome <= 231250) {
-                    estimatedTax = 37104 + (annualIncome - 182100) * 0.32;
-                } else if (annualIncome <= 578125) {
-                    estimatedTax = 52832 + (annualIncome - 231250) * 0.35;
-                } else {
-                    estimatedTax = 174238.50 + (annualIncome - 578125) * 0.37;
-                }
-                
-                const effectiveTaxRate = (estimatedTax / annualIncome) * 100;
-                const takeHomePay = annualIncome - estimatedTax;
-                
-                document.getElementById('estimatedTax').textContent = formatCurrency(estimatedTax);
-                document.getElementById('effectiveTaxRate').textContent = effectiveTaxRate.toFixed(2) + '%';
-                document.getElementById('takeHomePay').textContent = formatCurrency(takeHomePay);
-                document.getElementById('taxResult').style.display = 'block';
-                
-                showToast('Tax calculated successfully', 'success');
-            } else {
-                showToast('Please enter your annual income', 'error');
-            }
+            const annualIncome = parseFloat(document.getElementById('annualIncome').value);
+            const taxRate = parseFloat(document.getElementById('taxRate').value);
+            
+            // Calculate tax using user-provided tax rate
+            const tax = annualIncome * (taxRate / 100);
+            const takeHomePay = annualIncome - tax;
+            
+            // Display result
+            const taxResult = document.getElementById('taxResult');
+            taxResult.innerHTML = `
+                <h4>Tax Calculation Result</h4>
+                <div class="result-item">
+                    <span>Annual Income:</span>
+                    <strong>${formatCurrency(annualIncome)}</strong>
+                </div>
+                <div class="result-item">
+                    <span>Tax Rate:</span>
+                    <strong>${taxRate}%</strong>
+                </div>
+                <div class="result-item">
+                    <span>Estimated Tax:</span>
+                    <strong>${formatCurrency(tax)}</strong>
+                </div>
+                <div class="result-item">
+                    <span>Take Home Pay:</span>
+                    <strong>${formatCurrency(takeHomePay)}</strong>
+                </div>
+            `;
+            taxResult.classList.add('active');
         });
     }
 
     // Savings Goal Calculator
-    const calculateSavingsBtn = document.getElementById('calculateSavings');
-    if (calculateSavingsBtn) {
-        calculateSavingsBtn.addEventListener('click', () => {
-            const targetAmount = parseFloat(document.getElementById('targetAmount').value) || 0;
-            const timePeriod = parseFloat(document.getElementById('timePeriod').value) || 0;
-            const interestRate = parseFloat(document.getElementById('savingsInterestRate').value) || 0;
+    const savingsCalculatorForm = document.getElementById('savingsCalculatorForm');
+    if (savingsCalculatorForm) {
+        savingsCalculatorForm.addEventListener('submit', (e) => {
+            e.preventDefault();
             
-            if (targetAmount && timePeriod) {
+            const targetAmount = parseFloat(document.getElementById('targetAmount').value);
+            const timeframe = parseInt(document.getElementById('timeframe').value);
+            const interestRate = parseFloat(document.getElementById('interestRateSavings').value);
+            
+            // Calculate monthly savings needed
+            const monthlyRate = interestRate / 12 / 100;
+            const months = timeframe;
+            
+            let monthlySavings;
+            if (interestRate > 0) {
+                monthlySavings = targetAmount * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+            } else {
+                monthlySavings = targetAmount / months;
+            }
+            
+            const totalSavings = monthlySavings * months;
+            const interestEarned = totalSavings - targetAmount;
+            
+            // Display result
+            const savingsResult = document.getElementById('savingsResult');
+            savingsResult.innerHTML = `
+                <h4>Savings Goal Calculation Result</h4>
+                <div class="result-item">
+                    <span>Monthly Savings Needed:</span>
+                    <strong>${formatCurrency(monthlySavings)}</strong>
+                </div>
+                <div class="result-item">
+                    <span>Total Amount Saved:</span>
+                    <strong>${formatCurrency(totalSavings)}</strong>
+                </div>
+                <div class="result-item">
+                    <span>Interest Earned:</span>
+                    <strong>${formatCurrency(interestEarned)}</strong>
+                </div>
+            `;
+            savingsResult.classList.add('active');
+        });
+    }
+
+    // Budget tab buttons
+    if (currentPage === 'budgets') {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove active class from all tabs
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab
+                btn.classList.add('active');
+                document.getElementById(`${btn.dataset.tab}-tab`).classList.add('active');
+            });
+        });
+        
+        // Add budget button
+        const addBudgetBtn = document.getElementById('addBudgetBtn');
+        const createFirstBudgetBtn = document.getElementById('createFirstBudgetBtn');
+        
+        if (addBudgetBtn) {
+            addBudgetBtn.addEventListener('click', () => {
+                showBudgetModal();
+            });
+        }
+        
+        if (createFirstBudgetBtn) {
+            createFirstBudgetBtn.addEventListener('click', () => {
+                showBudgetModal();
+            });
+        }
+        
+        // Budget edit/delete buttons
+        document.querySelectorAll('.budget-card .action-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const budgetId = parseInt(btn.closest('.budget-card').dataset.id);
+                const currentUser = localStorage.getItem('loggedInUser');
+                const budgets = JSON.parse(localStorage.getItem(`${currentUser}_budgets`) || '[]');
+                const budget = budgets.find(b => b.id === budgetId);
+                
+                if (btn.classList.contains('edit')) {
+                    if (budget) {
+                        showBudgetModal(budget);
+                    }
+                } else if (btn.classList.contains('delete')) {
+                    if (confirm('Are you sure you want to delete this budget?')) {
+                        const updatedBudgets = budgets.filter(b => b.id !== budgetId);
+                        localStorage.setItem(`${currentUser}_budgets`, JSON.stringify(updatedBudgets));
+                        loadPage('budgets');
+                        showToast('Budget deleted successfully', 'success');
+                    }
+                }
+            });
+        });
+        
+        // EMI Calculator
+        const emiCalculatorForm = document.getElementById('emiCalculatorForm');
+        if (emiCalculatorForm) {
+            emiCalculatorForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const loanAmount = parseFloat(document.getElementById('loanAmount').value);
+                const interestRate = parseFloat(document.getElementById('interestRate').value);
+                const loanTerm = parseInt(document.getElementById('loanTerm').value);
+                
+                // Calculate EMI
                 const monthlyRate = interestRate / 12 / 100;
-                const numberOfMonths = timePeriod;
+                const numberOfPayments = loanTerm * 12;
+                const emi = loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments) / (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
+                const totalPayment = emi * numberOfPayments;
+                const totalInterest = totalPayment - loanAmount;
+                
+                // Display result
+                const emiResult = document.getElementById('emiResult');
+                emiResult.innerHTML = `
+                    <h4>EMI Calculation Result</h4>
+                    <div class="result-item">
+                        <span>Monthly EMI:</span>
+                        <strong>${formatCurrency(emi)}</strong>
+                    </div>
+                    <div class="result-item">
+                        <span>Total Payment:</span>
+                        <strong>${formatCurrency(totalPayment)}</strong>
+                    </div>
+                    <div class="result-item">
+                        <span>Total Interest:</span>
+                        <strong>${formatCurrency(totalInterest)}</strong>
+                    </div>
+                `;
+                emiResult.classList.add('active');
+            });
+        }
+        
+        // Tax Calculator
+        const taxCalculatorForm = document.getElementById('taxCalculatorForm');
+        if (taxCalculatorForm) {
+            taxCalculatorForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const annualIncome = parseFloat(document.getElementById('annualIncome').value);
+                const taxRate = parseFloat(document.getElementById('taxRate').value);
+                
+                // Calculate tax using user-provided tax rate
+                const tax = annualIncome * (taxRate / 100);
+                const takeHomePay = annualIncome - tax;
+                
+                // Display result
+                const taxResult = document.getElementById('taxResult');
+                taxResult.innerHTML = `
+                    <h4>Tax Calculation Result</h4>
+                    <div class="result-item">
+                        <span>Annual Income:</span>
+                        <strong>${formatCurrency(annualIncome)}</strong>
+                    </div>
+                    <div class="result-item">
+                        <span>Tax Rate:</span>
+                        <strong>${taxRate}%</strong>
+                    </div>
+                    <div class="result-item">
+                        <span>Estimated Tax:</span>
+                        <strong>${formatCurrency(tax)}</strong>
+                    </div>
+                    <div class="result-item">
+                        <span>Take Home Pay:</span>
+                        <strong>${formatCurrency(takeHomePay)}</strong>
+                    </div>
+                `;
+                taxResult.classList.add('active');
+            });
+        }
+        
+        // Savings Goal Calculator
+        const savingsCalculatorForm = document.getElementById('savingsCalculatorForm');
+        if (savingsCalculatorForm) {
+            savingsCalculatorForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const targetAmount = parseFloat(document.getElementById('targetAmount').value);
+                const timeframe = parseInt(document.getElementById('timeframe').value);
+                const interestRate = parseFloat(document.getElementById('interestRateSavings').value);
+                
+                // Calculate monthly savings needed
+                const monthlyRate = interestRate / 12 / 100;
+                const months = timeframe;
                 
                 let monthlySavings;
-                let totalContributions;
-                let totalInterestEarned;
-                
                 if (interestRate > 0) {
-                    // With interest
-                    monthlySavings = targetAmount * monthlyRate / (Math.pow(1 + monthlyRate, numberOfMonths) - 1);
-                    totalContributions = monthlySavings * numberOfMonths;
-                    totalInterestEarned = targetAmount - totalContributions;
+                    monthlySavings = targetAmount * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
                 } else {
-                    // Without interest
-                    monthlySavings = targetAmount / numberOfMonths;
-                    totalContributions = targetAmount;
-                    totalInterestEarned = 0;
+                    monthlySavings = targetAmount / months;
                 }
                 
-                document.getElementById('monthlySavings').textContent = formatCurrency(monthlySavings);
-                document.getElementById('totalInterestEarned').textContent = formatCurrency(totalInterestEarned);
-                document.getElementById('totalContributions').textContent = formatCurrency(totalContributions);
-                document.getElementById('savingsResult').style.display = 'block';
+                const totalSavings = monthlySavings * months;
+                const interestEarned = totalSavings - targetAmount;
                 
-                showToast('Savings plan calculated successfully', 'success');
-            } else {
-                showToast('Please fill all required fields', 'error');
-            }
-        });
+                // Display result
+                const savingsResult = document.getElementById('savingsResult');
+                savingsResult.innerHTML = `
+                    <h4>Savings Goal Calculation Result</h4>
+                    <div class="result-item">
+                        <span>Monthly Savings Needed:</span>
+                        <strong>${formatCurrency(monthlySavings)}</strong>
+                    </div>
+                    <div class="result-item">
+                        <span>Total Amount Saved:</span>
+                        <strong>${formatCurrency(totalSavings)}</strong>
+                    </div>
+                    <div class="result-item">
+                        <span>Interest Earned:</span>
+                        <strong>${formatCurrency(interestEarned)}</strong>
+                    </div>
+                `;
+                savingsResult.classList.add('active');
+            });
+        }
     }
 }
 
@@ -3231,4 +3603,88 @@ function showTransactionModal(transaction = null) {
         }
     `;
     document.head.appendChild(style);
+}
+
+// Function to show budget modal
+function showBudgetModal(budget = null) {
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>${budget ? 'Edit Budget' : 'Create New Budget'}</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="budgetForm">
+                <div class="form-group">
+                    <label for="budgetCategory">Category</label>
+                    <select id="budgetCategory" class="form-control" required>
+                        <option value="food" ${budget && budget.category === 'food' ? 'selected' : ''}>Food</option>
+                        <option value="shopping" ${budget && budget.category === 'shopping' ? 'selected' : ''}>Shopping</option>
+                        <option value="bills" ${budget && budget.category === 'bills' ? 'selected' : ''}>Bills</option>
+                        <option value="transport" ${budget && budget.category === 'transport' ? 'selected' : ''}>Transport</option>
+                        <option value="entertainment" ${budget && budget.category === 'entertainment' ? 'selected' : ''}>Entertainment</option>
+                        <option value="other" ${budget && budget.category === 'other' ? 'selected' : ''}>Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="budgetAmount">Monthly Budget Amount</label>
+                    <input type="number" id="budgetAmount" class="form-control" value="${budget ? budget.amount : ''}" required min="0" step="0.01">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" id="cancelBudget">Cancel</button>
+                    <button type="submit" class="btn btn-primary">${budget ? 'Update Budget' : 'Create Budget'}</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close modal handlers
+    const closeModal = () => {
+        modal.remove();
+    };
+    
+    modal.querySelector('.close-modal').addEventListener('click', closeModal);
+    modal.querySelector('#cancelBudget').addEventListener('click', closeModal);
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+    
+    // Form submission
+    const budgetForm = modal.querySelector('#budgetForm');
+    budgetForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const currentUser = localStorage.getItem('loggedInUser');
+        const budgets = JSON.parse(localStorage.getItem(`${currentUser}_budgets`) || '[]');
+        
+        const budgetData = {
+            id: budget ? budget.id : Date.now(),
+            category: document.getElementById('budgetCategory').value,
+            amount: parseFloat(document.getElementById('budgetAmount').value)
+        };
+        
+        if (budget) {
+            // Update existing budget
+            const index = budgets.findIndex(b => b.id === budget.id);
+            if (index !== -1) {
+                budgets[index] = budgetData;
+            }
+        } else {
+            // Add new budget
+            budgets.push(budgetData);
+        }
+        
+        localStorage.setItem(`${currentUser}_budgets`, JSON.stringify(budgets));
+        
+        closeModal();
+        loadPage('budgets');
+        showToast(`Budget ${budget ? 'updated' : 'created'} successfully`, 'success');
+    });
 }

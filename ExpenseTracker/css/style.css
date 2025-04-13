@@ -1,0 +1,225 @@
+/* Category Icons */
+.category-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    font-size: 1.2rem;
+    color: #fff;
+    background: var(--primary-color);
+}
+
+.category-icon i {
+    color: #fff;
+}
+
+/* Budget Cards */
+.budget-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+}
+
+.budget-card:hover {
+    transform: translateY(-2px);
+}
+
+.budget-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.budget-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.budget-icon i {
+    font-size: 1.2rem;
+    color: #fff;
+}
+
+.budget-title h3 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 1.1rem;
+}
+
+.budget-title p {
+    margin: 5px 0 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.budget-actions {
+    margin-left: auto;
+}
+
+.budget-actions .action-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 5px;
+    transition: color 0.2s;
+}
+
+.budget-actions .action-btn:hover {
+    color: var(--primary-color);
+}
+
+.budget-actions .action-btn.delete:hover {
+    color: var(--danger-color);
+}
+
+/* Progress Bar */
+.budget-progress {
+    margin-top: 15px;
+}
+
+.progress-bar {
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-fill.success {
+    background: var(--success-color);
+}
+
+.progress-fill.warning {
+    background: var(--warning-color);
+}
+
+.progress-fill.danger {
+    background: var(--danger-color);
+}
+
+.progress-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+/* Dark Theme Specific Adjustments */
+body.dark-mode .budget-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+}
+
+body.dark-mode .budget-icon,
+body.dark-mode .category-icon {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+body.dark-mode .budget-icon i,
+body.dark-mode .category-icon i {
+    color: #fff;
+}
+
+body.dark-mode .budget-actions .action-btn {
+    color: var(--text-muted);
+}
+
+body.dark-mode .budget-actions .action-btn:hover {
+    color: var(--primary-color);
+}
+
+body.dark-mode .progress-bar {
+    background: var(--border-color);
+}
+
+/* Calculator Section */
+.calculator-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.calculator-card h3 {
+    color: var(--text-color);
+    margin-bottom: 20px;
+}
+
+.calculator-form .form-group label {
+    color: var(--text-color);
+}
+
+.calculator-form .form-group input {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.calculator-form .form-group input:focus {
+    border-color: var(--primary-color);
+}
+
+.calculator-result {
+    margin-top: 20px;
+    padding: 15px;
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.calculator-result h4 {
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+
+.calculator-result p {
+    color: var(--text-muted);
+    margin: 5px 0;
+}
+
+/* Tab Buttons */
+.tab-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.tab-btn.active {
+    background: var(--primary-color);
+    color: #fff;
+} 
