@@ -20,6 +20,11 @@ const categorySelect = document.getElementById('transactionCategory');
 const customCategoryGroup = document.getElementById('customCategoryGroup');
 const customCategoryInput = document.getElementById('customCategory');
 
+// Mobile Sidebar Toggle
+const sidebar = document.getElementById('sidebar');
+const sidebarToggle = document.getElementById('sidebarToggle');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+
 let currentUser = localStorage.getItem('loggedInUser') || '';
 let editTransactionId = null; // To track if we're editing an existing transaction
 
@@ -1021,14 +1026,7 @@ function getGoalsContent() {
                     <h3>Goals Overview</h3>
                     <p class="amount">${goals.length} Total</p>
                     <div class="overview-stats">
-                        <div class="stat-item">
-                            <span>Completed</span>
-                            <span class="stat-value">${goals.filter(g => g.progress >= 100).length}</span>
-            </div>
-                        <div class="stat-item">
-                            <span>In Progress</span>
-                            <span class="stat-value">${goals.filter(g => g.progress < 100).length}</span>
-                    </div>
+                        
                         </div>
                         </div>
                     </div>
@@ -2523,6 +2521,9 @@ function initApp() {
     // Setup modal events
     setupModalEvents();
 
+    // Setup mobile sidebar
+    setupMobileSidebar();
+
     // Load dashboard by default
     loadPage('dashboard');
 
@@ -2532,13 +2533,69 @@ function initApp() {
     }, 1000);
 
     // Apply saved theme
-const savedTheme = localStorage.getItem("theme");
-if (savedTheme === "dark") {
-    document.body.classList.add("dark-mode");
-} else {
-    document.body.classList.remove("dark-mode");
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+        document.body.classList.add('dark-mode');
+    }
 }
 
+// Mobile Sidebar Toggle
+function setupMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    if (!sidebar || !sidebarToggle || !sidebarOverlay) {
+        console.error('Mobile sidebar elements not found');
+        return;
+    }
+
+    // Show sidebar when toggle button is clicked
+    sidebarToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sidebar.style.display = 'block';
+        sidebar.classList.add('active');
+        sidebarOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    });
+
+    // Hide sidebar when overlay is clicked
+    sidebarOverlay.addEventListener('click', () => {
+        sidebar.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+        document.body.style.overflow = '';
+    });
+
+    // Hide sidebar when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    });
+
+    // Close sidebar when menu item is clicked
+    const menuItems = sidebar.querySelectorAll('.nav-link');
+    menuItems.forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            sidebar.style.display = '';
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    });
 }
 
 function renderDashboardCharts(transactions) {
@@ -3837,3 +3894,51 @@ function toggleCustomCategory() {
 
 // Add event listener for category change
 categorySelect?.addEventListener('change', toggleCustomCategory);
+
+// Mobile Sidebar Toggle
+function setupMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const mainContent = document.getElementById('mainContent');
+
+    if (sidebarToggle && sidebar && sidebarOverlay) {
+        // Toggle sidebar
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.add('active');
+            sidebarOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+
+        // Close sidebar when clicking overlay
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+            document.body.style.overflow = '';
+        });
+
+        // Close sidebar when clicking a menu item
+        const menuItems = sidebar.querySelectorAll('.nav-link');
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('active');
+                    sidebarOverlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
+        });
+
+        // Close sidebar when window is resized above mobile breakpoint
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('active');
+                sidebarOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    }
+}
+
+// Initialize mobile sidebar
+setupMobileSidebar();
