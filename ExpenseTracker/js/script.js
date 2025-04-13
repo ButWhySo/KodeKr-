@@ -438,8 +438,8 @@ function getDashboardContent(transactions) {
                     <button class="btn btn-primary" id="addTransactionBtn">
                         <i class="fas fa-plus"></i> Add Transaction
                     </button>
-                </div>
             </div>
+        </div>
             ${generateTransactionList(transactions.slice(0, 5))}
         </div>
     `;
@@ -615,81 +615,254 @@ function getTransactionsContent(transactions = []) {
 
 // Budgets content
 function getBudgetsContent() {
+    const currentUser = localStorage.getItem('loggedInUser');
     const budgets = JSON.parse(localStorage.getItem(`${currentUser}_budgets`) || '[]');
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+    const transactions = users[currentUser]?.transactions || [];
+    
+    // Calculate monthly spending by category
+    const monthlySpending = {};
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    
+    transactions.forEach(tx => {
+        const txDate = new Date(tx.date);
+        if (tx.type === 'expense' && txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) {
+            monthlySpending[tx.category] = (monthlySpending[tx.category] || 0) + tx.amount;
+        }
+    });
     
     return `
-    <div class="header">
-        <h1 class="page-title">Budgets</h1>
-        <div class="header-actions">
-            <button class="btn btn-primary" id="addBudgetBtn">
+        <div class="header">
+        <h1 class="page-title">Budgets & Calculators</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" id="addBudgetBtn">
                 <i class="fas fa-plus"></i> Add Budget
-            </button>
-        </div>
-    </div>
-    <div class="budgets-container">
-        ${budgets.length === 0 ? `
-            <div class="empty-state">
-                <div class="empty-icon">
-                    <i class="fas fa-chart-pie"></i>
-                </div>
-                <h3 class="empty-title">No budgets set</h3>
-                <p class="empty-text">Create a budget to track your spending limits</p>
-                <button class="btn btn-primary" id="createFirstBudgetBtn">
-                    <i class="fas fa-plus"></i> Create Budget
                 </button>
             </div>
-        ` : `
-            <div class="budgets-grid">
-                ${budgets.map(budget => `
-                    <div class="budget-card" data-id="${budget.id}">
-                        <div class="budget-header">
-                            <h3>${budget.category}</h3>
-                            <div class="budget-icon ${budget.category.toLowerCase()}">
-                                <i class="fas ${getCategoryIcon(budget.category)}"></i>
+        </div>
+
+        <div class="budgets-container">
+        <div class="budget-tabs">
+            <button class="budget-tab active" data-tab="budgets">Budgets</button>
+            <button class="budget-tab" data-tab="calculators">Calculators</button>
+                </div>
+        
+        <div class="budget-content">
+            <div class="budget-section active" id="budgets-section">
+                ${budgets.length === 0 ? `
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-chart-pie"></i>
+            </div>
+                        <h3 class="empty-title">No budgets set</h3>
+                        <p class="empty-text">Create a budget to track your spending limits</p>
+                        <button class="btn btn-primary" id="createFirstBudgetBtn">
+                            <i class="fas fa-plus"></i> Create Budget
+                        </button>
+                    </div>
+                ` : `
+                    <div class="budgets-grid">
+                        ${budgets.map(budget => {
+                            const spent = monthlySpending[budget.category] || 0;
+                            const percentage = Math.min((spent / budget.limit) * 100, 100);
+                            const status = percentage >= 100 ? 'exceeded' : percentage >= 80 ? 'warning' : 'good';
+                            
+                            return `
+                                <div class="budget-card ${status}" data-id="${budget.id}">
+                    <div class="budget-header">
+                                        <h3>${budget.category}</h3>
+                                        <div class="budget-icon ${budget.category.toLowerCase()}">
+                                            <i class="fas ${getCategoryIcon(budget.category)}"></i>
+                                        </div>
+                    </div>
+                    <div class="budget-progress">
+                                        <div class="progress-bar">
+                                            <div class="progress" style="width: ${percentage}%"></div>
+                                        </div>
+                                        <div class="budget-amounts">
+                                            <span>${formatCurrency(spent)} / ${formatCurrency(budget.limit)}</span>
+                                            <span class="budget-percentage">${Math.round(percentage)}%</span>
+                                        </div>
+                    </div>
+                    <div class="budget-footer">
+                                        <span class="budget-period">${budget.period}</span>
+                                        <div class="budget-actions">
+                                            <button class="action-btn edit" data-id="${budget.id}">
+                                                <i class="fas fa-pencil-alt"></i>
+                                            </button>
+                                            <button class="action-btn delete" data-id="${budget.id}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                    </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `}
+                </div>
+                
+            <div class="budget-section" id="calculators-section">
+                <div class="calculators-grid">
+                    <div class="calculator-card">
+                        <h3>EMI Calculator</h3>
+                        <div class="calculator-form">
+                            <div class="form-group">
+                                <label>Loan Amount</label>
+                                <input type="number" id="loanAmount" class="form-control" placeholder="Enter loan amount">
+                    </div>
+                            <div class="form-group">
+                                <label>Interest Rate (% per year)</label>
+                                <input type="number" id="interestRate" class="form-control" placeholder="Enter interest rate">
+                    </div>
+                            <div class="form-group">
+                                <label>Loan Term (years)</label>
+                                <input type="number" id="loanTerm" class="form-control" placeholder="Enter loan term">
+                    </div>
+                            <button class="btn btn-primary" id="calculateEMI">Calculate EMI</button>
+                </div>
+                        <div class="calculator-result" id="emiResult" style="display: none;">
+                            <div class="result-item">
+                                <span>Monthly EMI:</span>
+                                <span id="monthlyEMI">$0</span>
+                    </div>
+                            <div class="result-item">
+                                <span>Total Interest:</span>
+                                <span id="totalInterest">$0</span>
+                    </div>
+                            <div class="result-item">
+                                <span>Total Payment:</span>
+                                <span id="totalPayment">$0</span>
                             </div>
+                    </div>
+                </div>
+                
+                    <div class="calculator-card">
+                        <h3>Tax Calculator</h3>
+                        <div class="calculator-form">
+                            <div class="form-group">
+                                <label>Annual Income</label>
+                                <input type="number" id="annualIncome" class="form-control" placeholder="Enter annual income">
+                    </div>
+                            <div class="form-group">
+                                <label>Tax Year</label>
+                                <select id="taxYear" class="form-control">
+                                    <option value="2024">2024</option>
+                                    <option value="2023">2023</option>
+                                </select>
+                    </div>
+                            <button class="btn btn-primary" id="calculateTax">Calculate Tax</button>
+                    </div>
+                        <div class="calculator-result" id="taxResult" style="display: none;">
+                            <div class="result-item">
+                                <span>Estimated Tax:</span>
+                                <span id="estimatedTax">$0</span>
+                            </div>
+                            <div class="result-item">
+                                <span>Effective Tax Rate:</span>
+                                <span id="effectiveTaxRate">0%</span>
+                            </div>
+                            <div class="result-item">
+                                <span>Take Home Pay:</span>
+                                <span id="takeHomePay">$0</span>
+                            </div>
+                </div>
+            </div>
+            
+                    <div class="calculator-card">
+                        <h3>Savings Goal Calculator</h3>
+                        <div class="calculator-form">
+                            <div class="form-group">
+                                <label>Target Amount</label>
+                                <input type="number" id="targetAmount" class="form-control" placeholder="Enter target amount">
+                            </div>
+                            <div class="form-group">
+                                <label>Time Period (months)</label>
+                                <input type="number" id="timePeriod" class="form-control" placeholder="Enter time period">
+                            </div>
+                            <div class="form-group">
+                                <label>Interest Rate (% per year)</label>
+                                <input type="number" id="savingsInterestRate" class="form-control" placeholder="Enter interest rate">
+                            </div>
+                            <button class="btn btn-primary" id="calculateSavings">Calculate Savings</button>
                         </div>
-                        <div class="budget-progress">
-                            <div class="progress-bar">
-                                <div class="progress" style="width: ${Math.min((budget.spent / budget.limit) * 100, 100)}%"></div>
+                        <div class="calculator-result" id="savingsResult" style="display: none;">
+                            <div class="result-item">
+                                <span>Monthly Savings Needed:</span>
+                                <span id="monthlySavings">$0</span>
                             </div>
-                            <div class="budget-amounts">
-                                <span>${formatCurrency(budget.spent)} / ${formatCurrency(budget.limit)}</span>
-                                <span class="budget-percentage">${Math.round((budget.spent / budget.limit) * 100)}%</span>
+                            <div class="result-item">
+                                <span>Total Interest Earned:</span>
+                                <span id="totalInterestEarned">$0</span>
                             </div>
-                        </div>
-                        <div class="budget-footer">
-                            <span class="budget-period">${budget.period}</span>
-                            <div class="budget-actions">
-                                <button class="action-btn edit" data-id="${budget.id}">
-                                    <i class="fas fa-pencil-alt"></i>
-                                </button>
-                                <button class="action-btn delete" data-id="${budget.id}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                            <div class="result-item">
+                                <span>Total Contributions:</span>
+                                <span id="totalContributions">$0</span>
                             </div>
                         </div>
                     </div>
-                `).join('')}
+                </div>
             </div>
-        `}
-    </div>
+        </div>
+        </div>
     `;
 }
 
 // Goals content
 function getGoalsContent() {
+    const currentUser = localStorage.getItem('loggedInUser');
     const goals = JSON.parse(localStorage.getItem(`${currentUser}_goals`) || '[]');
+    const users = JSON.parse(localStorage.getItem('users') || '{}');
+    const transactions = users[currentUser]?.transactions || [];
+    
+    // Calculate total savings from transactions
+    const totalSavings = transactions.reduce((sum, tx) => {
+        if (tx.type === 'income') {
+            return sum + tx.amount;
+        }
+        return sum - tx.amount;
+    }, 0);
     
     return `
-    <div class="header">
+        <div class="header">
         <h1 class="page-title">Financial Goals</h1>
-        <div class="header-actions">
-            <button class="btn btn-primary" id="addGoalBtn">
+            <div class="header-actions">
+                <button class="btn btn-primary" id="addGoalBtn">
                 <i class="fas fa-plus"></i> Add Goal
-            </button>
+                </button>
+            </div>
         </div>
-    </div>
-    <div class="goals-container">
+
+        <div class="goals-container">
+        <div class="goals-overview">
+            <div class="overview-card">
+                <h3>Total Savings</h3>
+                <div class="overview-value">${formatCurrency(totalSavings)}</div>
+                <div class="overview-progress">
+                    <div class="progress-bar">
+                        <div class="progress" style="width: ${Math.min((totalSavings / 10000) * 100, 100)}%"></div>
+                    </div>
+                    <span class="progress-label">Progress to $10,000</span>
+                </div>
+            </div>
+            
+            <div class="overview-card">
+                <h3>Active Goals</h3>
+                <div class="overview-value">${goals.length}</div>
+                <div class="overview-stats">
+                    <div class="stat-item">
+                        <span>Completed</span>
+                        <span>${goals.filter(g => g.progress >= 100).length}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>In Progress</span>
+                        <span>${goals.filter(g => g.progress < 100).length}</span>
+                        </div>
+                        </div>
+                    </div>
+                    </div>
+        
         ${goals.length === 0 ? `
             <div class="empty-state">
                 <div class="empty-icon">
@@ -703,39 +876,54 @@ function getGoalsContent() {
             </div>
         ` : `
             <div class="goals-grid">
-                ${goals.map(goal => `
-                    <div class="goal-card" data-id="${goal.id}">
-                        <div class="goal-header">
-                            <h3>${goal.name}</h3>
-                            <div class="goal-icon">
-                                <i class="fas ${getGoalIcon(goal.type)}"></i>
+                ${goals.map(goal => {
+                    const progress = Math.min((goal.current / goal.target) * 100, 100);
+                    const status = progress >= 100 ? 'completed' : progress >= 75 ? 'near-complete' : 'in-progress';
+                    const daysLeft = Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+                    
+                    return `
+                        <div class="goal-card ${status}" data-id="${goal.id}">
+                            <div class="goal-header">
+                                <h3>${goal.name}</h3>
+                    <div class="goal-icon">
+                                    <i class="fas ${getGoalIcon(goal.type)}"></i>
+                    </div>
                             </div>
-                        </div>
                         <div class="goal-progress">
-                            <div class="progress-bar">
-                                <div class="progress" style="width: ${Math.min((goal.current / goal.target) * 100, 100)}%"></div>
-                            </div>
-                            <div class="goal-amounts">
-                                <span>${formatCurrency(goal.current)} / ${formatCurrency(goal.target)}</span>
-                                <span class="goal-percentage">${Math.round((goal.current / goal.target) * 100)}%</span>
-                            </div>
+                                <div class="progress-bar">
+                                    <div class="progress" style="width: ${progress}%"></div>
                         </div>
-                        <div class="goal-footer">
-                            <span class="goal-deadline">Due: ${formatDate(goal.deadline)}</span>
-                            <div class="goal-actions">
-                                <button class="action-btn edit" data-id="${goal.id}">
-                                    <i class="fas fa-pencil-alt"></i>
-                                </button>
-                                <button class="action-btn delete" data-id="${goal.id}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
+                                <div class="goal-amounts">
+                                    <span>${formatCurrency(goal.current)} / ${formatCurrency(goal.target)}</span>
+                                    <span class="goal-percentage">${Math.round(progress)}%</span>
                         </div>
                     </div>
-                `).join('')}
+                    <div class="goal-details">
+                                <div class="detail-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>${daysLeft} days left</span>
+                        </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span>${goal.type}</span>
+                        </div>
+                    </div>
+                            <div class="goal-footer">
+                    <div class="goal-actions">
+                                    <button class="action-btn edit" data-id="${goal.id}">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                    <button class="action-btn delete" data-id="${goal.id}">
+                                        <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
+                    `;
+                }).join('')}
+                </div>
         `}
-    </div>
+        </div>
     `;
 }
 
@@ -1253,10 +1441,10 @@ function getSettingsContent() {
     const savedCurrency = localStorage.getItem('currency') || 'USD';
     
     return `
-    <div class="header">
-        <h1 class="page-title">Settings</h1>
-    </div>
-    <div class="settings-container">
+        <div class="header">
+            <h1 class="page-title">Settings</h1>
+        </div>
+        <div class="settings-container">
         <div class="settings-section">
             <h2 class="section-title">Appearance</h2>
             <div class="settings-group">
@@ -1268,46 +1456,77 @@ function getSettingsContent() {
                             <i class="fas fa-sun"></i>
                             Light
                         </label>
-                    </div>
+            </div>
                     <div class="radio-option">
                         <input type="radio" id="darkTheme" name="theme" value="dark" ${savedTheme === 'dark' ? 'checked' : ''}>
                         <label for="darkTheme" class="radio-label">
                             <i class="fas fa-moon"></i>
                             Dark
                         </label>
+                            </div>
+                        </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-        
+                    
         <div class="settings-section">
             <h2 class="section-title">Preferences</h2>
             <div class="settings-group">
                 <label class="settings-label">Currency</label>
                 <select id="currencySelect" class="form-control form-select">
-                    <option value="USD" ${savedCurrency === 'USD' ? 'selected' : ''}>USD ($)</option>
-                    <option value="EUR" ${savedCurrency === 'EUR' ? 'selected' : ''}>EUR (€)</option>
-                    <option value="GBP" ${savedCurrency === 'GBP' ? 'selected' : ''}>GBP (£)</option>
-                    <option value="JPY" ${savedCurrency === 'JPY' ? 'selected' : ''}>JPY (¥)</option>
-                </select>
-            </div>
-        </div>
-        
+                    <option value="USD" ${savedCurrency === 'USD' ? 'selected' : ''}>USD - US Dollar ($)</option>
+                    <option value="EUR" ${savedCurrency === 'EUR' ? 'selected' : ''}>EUR - Euro (€)</option>
+                    <option value="GBP" ${savedCurrency === 'GBP' ? 'selected' : ''}>GBP - British Pound (£)</option>
+                    <option value="JPY" ${savedCurrency === 'JPY' ? 'selected' : ''}>JPY - Japanese Yen (¥)</option>
+                    <option value="AUD" ${savedCurrency === 'AUD' ? 'selected' : ''}>AUD - Australian Dollar (A$)</option>
+                    <option value="CAD" ${savedCurrency === 'CAD' ? 'selected' : ''}>CAD - Canadian Dollar (C$)</option>
+                    <option value="CHF" ${savedCurrency === 'CHF' ? 'selected' : ''}>CHF - Swiss Franc (Fr)</option>
+                    <option value="CNY" ${savedCurrency === 'CNY' ? 'selected' : ''}>CNY - Chinese Yuan (¥)</option>
+                    <option value="INR" ${savedCurrency === 'INR' ? 'selected' : ''}>INR - Indian Rupee (₹)</option>
+                    <option value="BRL" ${savedCurrency === 'BRL' ? 'selected' : ''}>BRL - Brazilian Real (R$)</option>
+                    <option value="RUB" ${savedCurrency === 'RUB' ? 'selected' : ''}>RUB - Russian Ruble (₽)</option>
+                    <option value="KRW" ${savedCurrency === 'KRW' ? 'selected' : ''}>KRW - South Korean Won (₩)</option>
+                    <option value="SGD" ${savedCurrency === 'SGD' ? 'selected' : ''}>SGD - Singapore Dollar (S$)</option>
+                    <option value="NZD" ${savedCurrency === 'NZD' ? 'selected' : ''}>NZD - New Zealand Dollar (NZ$)</option>
+                    <option value="MXN" ${savedCurrency === 'MXN' ? 'selected' : ''}>MXN - Mexican Peso (Mex$)</option>
+                    <option value="HKD" ${savedCurrency === 'HKD' ? 'selected' : ''}>HKD - Hong Kong Dollar (HK$)</option>
+                    <option value="TRY" ${savedCurrency === 'TRY' ? 'selected' : ''}>TRY - Turkish Lira (₺)</option>
+                    <option value="SAR" ${savedCurrency === 'SAR' ? 'selected' : ''}>SAR - Saudi Riyal (﷼)</option>
+                    <option value="AED" ${savedCurrency === 'AED' ? 'selected' : ''}>AED - UAE Dirham (د.إ)</option>
+                    <option value="SEK" ${savedCurrency === 'SEK' ? 'selected' : ''}>SEK - Swedish Krona (kr)</option>
+                    <option value="NOK" ${savedCurrency === 'NOK' ? 'selected' : ''}>NOK - Norwegian Krone (kr)</option>
+                    <option value="DKK" ${savedCurrency === 'DKK' ? 'selected' : ''}>DKK - Danish Krone (kr)</option>
+                    <option value="PLN" ${savedCurrency === 'PLN' ? 'selected' : ''}>PLN - Polish Złoty (zł)</option>
+                    <option value="THB" ${savedCurrency === 'THB' ? 'selected' : ''}>THB - Thai Baht (฿)</option>
+                    <option value="IDR" ${savedCurrency === 'IDR' ? 'selected' : ''}>IDR - Indonesian Rupiah (Rp)</option>
+                    <option value="HUF" ${savedCurrency === 'HUF' ? 'selected' : ''}>HUF - Hungarian Forint (Ft)</option>
+                    <option value="CZK" ${savedCurrency === 'CZK' ? 'selected' : ''}>CZK - Czech Koruna (Kč)</option>
+                    <option value="ILS" ${savedCurrency === 'ILS' ? 'selected' : ''}>ILS - Israeli Shekel (₪)</option>
+                    <option value="CLP" ${savedCurrency === 'CLP' ? 'selected' : ''}>CLP - Chilean Peso ($)</option>
+                    <option value="PHP" ${savedCurrency === 'PHP' ? 'selected' : ''}>PHP - Philippine Peso (₱)</option>
+                    <option value="AED" ${savedCurrency === 'AED' ? 'selected' : ''}>AED - UAE Dirham (د.إ)</option>
+                    <option value="COP" ${savedCurrency === 'COP' ? 'selected' : ''}>COP - Colombian Peso ($)</option>
+                    <option value="SAR" ${savedCurrency === 'SAR' ? 'selected' : ''}>SAR - Saudi Riyal (﷼)</option>
+                    <option value="MYR" ${savedCurrency === 'MYR' ? 'selected' : ''}>MYR - Malaysian Ringgit (RM)</option>
+                    <option value="RON" ${savedCurrency === 'RON' ? 'selected' : ''}>RON - Romanian Leu (lei)</option>
+                        </select>
+                    </div>
+                    </div>
+                    
         <div class="settings-section">
             <h2 class="section-title">Data Management</h2>
             <div class="settings-group">
                 <button class="btn btn-outline" id="exportDataBtn">
                     <i class="fas fa-download"></i> Export Data
-                </button>
+                        </button>
                 <button class="btn btn-outline" id="importDataBtn">
                     <i class="fas fa-upload"></i> Import Data
                 </button>
                 <button class="btn btn-outline" id="clearDataBtn">
                     <i class="fas fa-trash"></i> Clear All Data
-                </button>
+                        </button>
+                    </div>
             </div>
         </div>
-    </div>
     `;
 }
 
@@ -1575,30 +1794,41 @@ if (logoutUser) {
     const addGoalBtn = document.getElementById('addGoalBtn');
     if (addGoalBtn) {
         addGoalBtn.addEventListener('click', () => {
-            showToast('Add goal modal would open here', 'success');
+            showGoalModal();
         });
     }
 
-    // Add first goal button (empty state)
-    const addFirstGoalBtn = document.getElementById('addFirstGoalBtn');
-    if (addFirstGoalBtn) {
-        addFirstGoalBtn.addEventListener('click', () => {
-            showToast('Add goal modal would open here', 'success');
+    // Create first goal button (empty state)
+    const createFirstGoalBtn = document.getElementById('createFirstGoalBtn');
+    if (createFirstGoalBtn) {
+        createFirstGoalBtn.addEventListener('click', () => {
+            showGoalModal();
         });
     }
 
-    // Goal menu buttons
-    for (let i = 1; i <= 3; i++) {
-        const goalMenuBtn = document.getElementById(`goalMenuBtn${i}`);
-        if (goalMenuBtn) {
-            goalMenuBtn.addEventListener('click', () => {
-                showToast(`Goal menu for goal ${i} would open here`, 'success');
-            });
-        }
-    }
-
-
-    
+    // Goal edit/delete buttons
+    document.querySelectorAll('.goal-card .action-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const goalId = parseInt(btn.closest('.goal-card').dataset.id);
+            const currentUser = localStorage.getItem('loggedInUser');
+            const goals = JSON.parse(localStorage.getItem(`${currentUser}_goals`) || '[]');
+            const goal = goals.find(g => g.id === goalId);
+            
+            if (btn.classList.contains('edit')) {
+                if (goal) {
+                    showGoalModal(goal);
+                }
+            } else if (btn.classList.contains('delete')) {
+                if (confirm('Are you sure you want to delete this goal?')) {
+                    const updatedGoals = goals.filter(g => g.id !== goalId);
+                    localStorage.setItem(`${currentUser}_goals`, JSON.stringify(updatedGoals));
+                    loadPage('goals');
+                    showToast('Goal deleted successfully', 'success');
+                }
+            }
+        });
+    });
 
     // Transaction edit/delete buttons
     document.querySelectorAll('.transaction-item .action-btn').forEach(btn => {
@@ -1794,6 +2024,136 @@ if (filterType && filterCategory && filterDateRange) {
             showToast(`Report period changed to ${selectedRange}`, 'success');
         });
     }
+
+    // Budget tabs
+    const budgetTabs = document.querySelectorAll('.budget-tab');
+    if (budgetTabs.length > 0) {
+        budgetTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and sections
+                document.querySelectorAll('.budget-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.budget-section').forEach(s => s.classList.remove('active'));
+                
+                // Add active class to clicked tab
+                tab.classList.add('active');
+                
+                // Show corresponding section
+                const tabId = tab.getAttribute('data-tab');
+                document.getElementById(`${tabId}-section`).classList.add('active');
+            });
+        });
+    }
+
+    // EMI Calculator
+    const calculateEMIBtn = document.getElementById('calculateEMI');
+    if (calculateEMIBtn) {
+        calculateEMIBtn.addEventListener('click', () => {
+            const loanAmount = parseFloat(document.getElementById('loanAmount').value) || 0;
+            const interestRate = parseFloat(document.getElementById('interestRate').value) || 0;
+            const loanTerm = parseFloat(document.getElementById('loanTerm').value) || 0;
+            
+            if (loanAmount && interestRate && loanTerm) {
+                const monthlyRate = interestRate / 12 / 100;
+                const numberOfPayments = loanTerm * 12;
+                
+                const monthlyEMI = loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments) / 
+                                  (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
+                
+                const totalPayment = monthlyEMI * numberOfPayments;
+                const totalInterest = totalPayment - loanAmount;
+                
+                document.getElementById('monthlyEMI').textContent = formatCurrency(monthlyEMI);
+                document.getElementById('totalInterest').textContent = formatCurrency(totalInterest);
+                document.getElementById('totalPayment').textContent = formatCurrency(totalPayment);
+                document.getElementById('emiResult').style.display = 'block';
+                
+                showToast('EMI calculated successfully', 'success');
+            } else {
+                showToast('Please fill all fields', 'error');
+            }
+        });
+    }
+
+    // Tax Calculator
+    const calculateTaxBtn = document.getElementById('calculateTax');
+    if (calculateTaxBtn) {
+        calculateTaxBtn.addEventListener('click', () => {
+            const annualIncome = parseFloat(document.getElementById('annualIncome').value) || 0;
+            
+            if (annualIncome) {
+                // Simplified tax calculation (can be expanded with actual tax brackets)
+                let estimatedTax = 0;
+                
+                if (annualIncome <= 11000) {
+                    estimatedTax = annualIncome * 0.10;
+                } else if (annualIncome <= 44725) {
+                    estimatedTax = 1100 + (annualIncome - 11000) * 0.12;
+                } else if (annualIncome <= 95375) {
+                    estimatedTax = 5147 + (annualIncome - 44725) * 0.22;
+                } else if (annualIncome <= 182100) {
+                    estimatedTax = 16290 + (annualIncome - 95375) * 0.24;
+                } else if (annualIncome <= 231250) {
+                    estimatedTax = 37104 + (annualIncome - 182100) * 0.32;
+                } else if (annualIncome <= 578125) {
+                    estimatedTax = 52832 + (annualIncome - 231250) * 0.35;
+                } else {
+                    estimatedTax = 174238.50 + (annualIncome - 578125) * 0.37;
+                }
+                
+                const effectiveTaxRate = (estimatedTax / annualIncome) * 100;
+                const takeHomePay = annualIncome - estimatedTax;
+                
+                document.getElementById('estimatedTax').textContent = formatCurrency(estimatedTax);
+                document.getElementById('effectiveTaxRate').textContent = effectiveTaxRate.toFixed(2) + '%';
+                document.getElementById('takeHomePay').textContent = formatCurrency(takeHomePay);
+                document.getElementById('taxResult').style.display = 'block';
+                
+                showToast('Tax calculated successfully', 'success');
+            } else {
+                showToast('Please enter your annual income', 'error');
+            }
+        });
+    }
+
+    // Savings Goal Calculator
+    const calculateSavingsBtn = document.getElementById('calculateSavings');
+    if (calculateSavingsBtn) {
+        calculateSavingsBtn.addEventListener('click', () => {
+            const targetAmount = parseFloat(document.getElementById('targetAmount').value) || 0;
+            const timePeriod = parseFloat(document.getElementById('timePeriod').value) || 0;
+            const interestRate = parseFloat(document.getElementById('savingsInterestRate').value) || 0;
+            
+            if (targetAmount && timePeriod) {
+                const monthlyRate = interestRate / 12 / 100;
+                const numberOfMonths = timePeriod;
+                
+                let monthlySavings;
+                let totalContributions;
+                let totalInterestEarned;
+                
+                if (interestRate > 0) {
+                    // With interest
+                    monthlySavings = targetAmount * monthlyRate / (Math.pow(1 + monthlyRate, numberOfMonths) - 1);
+                    totalContributions = monthlySavings * numberOfMonths;
+                    totalInterestEarned = targetAmount - totalContributions;
+                } else {
+                    // Without interest
+                    monthlySavings = targetAmount / numberOfMonths;
+                    totalContributions = targetAmount;
+                    totalInterestEarned = 0;
+                }
+                
+                document.getElementById('monthlySavings').textContent = formatCurrency(monthlySavings);
+                document.getElementById('totalInterestEarned').textContent = formatCurrency(totalInterestEarned);
+                document.getElementById('totalContributions').textContent = formatCurrency(totalContributions);
+                document.getElementById('savingsResult').style.display = 'block';
+                
+                showToast('Savings plan calculated successfully', 'success');
+            } else {
+                showToast('Please fill all required fields', 'error');
+            }
+        });
+    }
 }
 
 // 🔍 Live search transactions by any parameter
@@ -1937,7 +2297,7 @@ function renderDashboardCharts(transactions) {
 
 function renderReportsCharts(transactions) {
     if (window.categoryChart) window.categoryChart.destroy();
-    if (window.trendChart) window.trendChart.destroy();
+if (window.trendChart) window.trendChart.destroy();
 
     if (!window.Chart || !transactions) return;
 
@@ -2529,4 +2889,346 @@ function setupSettingsEvents() {
             }
         });
     }
+}
+
+// Function to show goal modal (updated to handle both create and edit)
+function showGoalModal(goal = null) {
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>${goal ? 'Edit Goal' : 'Create New Goal'}</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="goalForm">
+                <div class="form-group">
+                    <label>Goal Name</label>
+                    <input type="text" id="goalName" class="form-control" value="${goal ? goal.name : ''}" required>
+                </div>
+                <div class="form-group">
+                    <label>Target Amount</label>
+                    <input type="number" id="goalTarget" class="form-control" value="${goal ? goal.target : ''}" required>
+                </div>
+                <div class="form-group">
+                    <label>Current Amount</label>
+                    <input type="number" id="goalCurrent" class="form-control" value="${goal ? goal.current : ''}" required>
+                </div>
+                <div class="form-group">
+                    <label>Goal Type</label>
+                    <select id="goalType" class="form-control" required>
+                        <option value="savings" ${goal && goal.type === 'savings' ? 'selected' : ''}>Savings</option>
+                        <option value="debt" ${goal && goal.type === 'debt' ? 'selected' : ''}>Debt Repayment</option>
+                        <option value="investment" ${goal && goal.type === 'investment' ? 'selected' : ''}>Investment</option>
+                        <option value="purchase" ${goal && goal.type === 'purchase' ? 'selected' : ''}>Major Purchase</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Deadline</label>
+                    <input type="date" id="goalDeadline" class="form-control" value="${goal ? goal.deadline : ''}" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" id="cancelGoal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">${goal ? 'Update Goal' : 'Create Goal'}</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close modal handlers
+    const closeModal = () => {
+        modal.remove();
+    };
+    
+    modal.querySelector('.close-modal').addEventListener('click', closeModal);
+    modal.querySelector('#cancelGoal').addEventListener('click', closeModal);
+    
+    // Form submission
+    const goalForm = modal.querySelector('#goalForm');
+    goalForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const currentUser = localStorage.getItem('loggedInUser');
+        const goals = JSON.parse(localStorage.getItem(`${currentUser}_goals`) || '[]');
+        
+        const goalData = {
+            id: goal ? goal.id : Date.now(),
+            name: document.getElementById('goalName').value,
+            target: parseFloat(document.getElementById('goalTarget').value),
+            current: parseFloat(document.getElementById('goalCurrent').value),
+            type: document.getElementById('goalType').value,
+            deadline: document.getElementById('goalDeadline').value
+        };
+        
+        if (goal) {
+            // Update existing goal
+            const index = goals.findIndex(g => g.id === goal.id);
+            if (index !== -1) {
+                goals[index] = goalData;
+            }
+        } else {
+            // Add new goal
+            goals.push(goalData);
+        }
+        
+        localStorage.setItem(`${currentUser}_goals`, JSON.stringify(goals));
+        
+        closeModal();
+        loadPage('goals');
+        showToast(`Goal ${goal ? 'updated' : 'created'} successfully`, 'success');
+    });
+}
+
+// Function to show transaction modal (updated to handle both create and edit)
+function showTransactionModal(transaction = null) {
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>${transaction ? 'Edit Transaction' : 'Add Transaction'}</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="transactionForm" class="transaction-form">
+                <div class="form-group">
+                    <label for="transactionName">Name</label>
+                    <input type="text" id="transactionName" class="form-control" value="${transaction ? transaction.name : ''}" required>
+                </div>
+                <div class="form-group">
+                    <label for="transactionAmount">Amount</label>
+                    <input type="number" id="transactionAmount" class="form-control" value="${transaction ? transaction.amount : ''}" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="transactionType" value="income" ${transaction && transaction.type === 'income' ? 'checked' : ''}>
+                            <span>Income</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="transactionType" value="expense" ${!transaction || transaction.type === 'expense' ? 'checked' : ''}>
+                            <span>Expense</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="transactionCategory">Category</label>
+                    <select id="transactionCategory" class="form-control" required>
+                        <option value="food" ${transaction && transaction.category === 'food' ? 'selected' : ''}>Food</option>
+                        <option value="shopping" ${transaction && transaction.category === 'shopping' ? 'selected' : ''}>Shopping</option>
+                        <option value="bills" ${transaction && transaction.category === 'bills' ? 'selected' : ''}>Bills</option>
+                        <option value="transport" ${transaction && transaction.category === 'transport' ? 'selected' : ''}>Transport</option>
+                        <option value="entertainment" ${transaction && transaction.category === 'entertainment' ? 'selected' : ''}>Entertainment</option>
+                        <option value="other" ${transaction && transaction.category === 'other' ? 'selected' : ''}>Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="transactionDate">Date</label>
+                    <input type="date" id="transactionDate" class="form-control" value="${transaction ? transaction.date : new Date().toISOString().split('T')[0]}" required>
+                </div>
+                <div class="form-group">
+                    <label for="transactionNotes">Notes</label>
+                    <textarea id="transactionNotes" class="form-control" rows="3">${transaction ? transaction.notes || '' : ''}</textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" id="cancelTransaction">Cancel</button>
+                    <button type="submit" class="btn btn-primary">${transaction ? 'Update Transaction' : 'Add Transaction'}</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close modal handlers
+    const closeModal = () => {
+        modal.remove();
+    };
+    
+    modal.querySelector('.close-modal').addEventListener('click', closeModal);
+    modal.querySelector('#cancelTransaction').addEventListener('click', closeModal);
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+    
+    // Form submission
+    const transactionForm = modal.querySelector('#transactionForm');
+    transactionForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const currentUser = localStorage.getItem('loggedInUser');
+        const users = JSON.parse(localStorage.getItem('users') || '{}');
+        let transactions = users[currentUser]?.transactions || [];
+        
+        const transactionData = {
+            id: transaction ? transaction.id : Date.now(),
+            name: document.getElementById('transactionName').value.trim(),
+            amount: parseFloat(document.getElementById('transactionAmount').value),
+            type: document.querySelector('input[name="transactionType"]:checked').value,
+            category: document.getElementById('transactionCategory').value,
+            date: document.getElementById('transactionDate').value,
+            notes: document.getElementById('transactionNotes').value.trim()
+        };
+        
+        if (transaction) {
+            // Delete the original transaction
+            transactions = transactions.filter(t => t.id !== transaction.id);
+            // Add the new transaction with the same ID
+            transactions.unshift(transactionData);
+        } else {
+            // Add new transaction
+            transactions.unshift(transactionData);
+        }
+        
+        users[currentUser].transactions = transactions;
+        localStorage.setItem('users', JSON.stringify(users));
+        
+        closeModal();
+        loadPage(currentPage);
+        showToast(`Transaction ${transaction ? 'updated' : 'added'} successfully`, 'success');
+    });
+
+    // Add CSS styles for the modal
+    const style = document.createElement('style');
+    style.textContent = `
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            background: var(--bg-color);
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal.active .modal-content {
+            transform: translateY(0);
+        }
+        
+        .modal-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--text-color);
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-color);
+            padding: 0.5rem;
+        }
+        
+        .transaction-form {
+            padding: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--input-bg);
+            color: var(--text-color);
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        textarea.form-control {
+            resize: vertical;
+            min-height: 80px;
+        }
+    `;
+    document.head.appendChild(style);
 }
