@@ -1008,33 +1008,19 @@ function getGoalsContent() {
         </div>
 
         <div class="goals-container">
-        <div class="goals-overview">
-            <div class="overview-card">
-                <h3>Total Savings</h3>
-                <div class="overview-value">${formatCurrency(totalSavings)}</div>
-                <div class="overview-progress">
-                    <div class="progress-bar">
-                        <div class="progress" style="width: ${Math.min((totalSavings / 10000) * 100, 100)}%"></div>
+            <div class="goals-overview">
+                <div class="overview-card">
+                    <h3>Total Savings</h3>
+                    <p class="amount">${formatCurrency(totalSavings)}</p>
+                </div>
+                <div class="overview-card">
+                    <h3>Goals Overview</h3>
+                    <p class="amount">${goals.length} Total</p>
+                    <div class="overview-stats">
+                        
                     </div>
-                    <span class="progress-label">Progress to $10,000</span>
                 </div>
             </div>
-            
-            <div class="overview-card">
-                <h3>Active Goals</h3>
-                <div class="overview-value">${goals.length}</div>
-                <div class="overview-stats">
-                    <div class="stat-item">
-                        <span>Completed</span>
-                        <span>${goals.filter(g => g.progress >= 100).length}</span>
-                    </div>
-                    <div class="stat-item">
-                        <span>In Progress</span>
-                        <span>${goals.filter(g => g.progress < 100).length}</span>
-                        </div>
-                        </div>
-                    </div>
-                    </div>
         
         ${goals.length === 0 ? `
             <div class="empty-state">
@@ -1958,6 +1944,7 @@ if (logoutUser) {
                 if (confirm('Are you sure you want to delete this goal?')) {
                     const updatedGoals = goals.filter(g => g.id !== goalId);
                     localStorage.setItem(`${currentUser}_goals`, JSON.stringify(updatedGoals));
+                    // Force a complete page refresh to ensure all stats are updated
                     loadPage('goals');
                     showToast('Goal deleted successfully', 'success');
                 }
@@ -2529,7 +2516,7 @@ function initApp() {
 
     // Show welcome toast
     setTimeout(() => {
-        showToast('Welcome to Spending Tracker!', 'success', 4000);
+        showToast('Welcome to Ledger!', 'success', 4000);
     }, 1000);
 
     // Apply saved theme
@@ -3359,6 +3346,7 @@ function showGoalModal(goal = null) {
         localStorage.setItem(`${currentUser}_goals`, JSON.stringify(goals));
         
         closeModal();
+        // Force a complete page refresh to ensure all stats are updated
         loadPage('goals');
         showToast(`Goal ${goal ? 'updated' : 'created'} successfully`, 'success');
     });
