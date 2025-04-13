@@ -574,10 +574,12 @@ function getTransactionsContent(transactions = []) {
                     <label>Category:</label>
                     <select class="form-control" id="filterCategory">
                         <option value="all">All Categories</option>
+                        <option value="salary">Salary</option>
                         <option value="food">Food</option>
                         <option value="shopping">Shopping</option>
                         <option value="bills">Bills</option>
                         <option value="transport">Transport</option>
+                        <option value="entertainment">Entertainment</option>
                     </select>
                 </div>
                 <div class="filter-group">
