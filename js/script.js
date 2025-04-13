@@ -16,6 +16,10 @@ const closeModalBtn = document.getElementById('closeModalBtn');
 const cancelTransactionBtn = document.getElementById('cancelTransactionBtn');
 const saveTransactionBtn = document.getElementById('saveTransactionBtn');
 const transactionForm = document.getElementById('transactionForm');
+const categorySelect = document.getElementById('transactionCategory');
+const customCategoryGroup = document.getElementById('customCategoryGroup');
+const customCategoryInput = document.getElementById('customCategory');
+
 let currentUser = localStorage.getItem('loggedInUser') || '';
 let editTransactionId = null; // To track if we're editing an existing transaction
 
@@ -549,15 +553,15 @@ function getTransactionsContent(transactions = []) {
                     <i class="fas fa-search"></i>
                     <input type="text" placeholder="Search transactions..." id="searchTransactions">
                 </div>
-                <button class="btn btn-primary" id="addTransactionBtn">
-                    <i class="fas fa-plus"></i> Add Transaction
-                </button>
+                    <button class="btn btn-primary" id="addTransactionBtn">
+                        <i class="fas fa-plus"></i> Add Transaction
+                    </button>
                 <button class="btn btn-secondary" id="exportTransactionsBtn">
                     <i class="fas fa-file-export"></i> Export
-                </button>
+                    </button>
+                </div>
             </div>
-        </div>
-        
+            
         <div class="transactions-container">
             <div class="transaction-filters">
                 <div class="filter-group">
@@ -593,7 +597,7 @@ function getTransactionsContent(transactions = []) {
                 <div class="empty-state">
                     <i class="fas fa-receipt"></i>
                     <p>No transactions yet. Add your first transaction to get started.</p>
-                </div>
+            </div>
             ` : generateTransactionList(transactions)}
         </div>
     `;
@@ -999,10 +1003,10 @@ function getGoalsContent() {
     
     return `
         <div class="header">
-        <h1 class="page-title">Financial Goals</h1>
+            <h1 class="page-title">Financial Goals</h1>
             <div class="header-actions">
                 <button class="btn btn-primary" id="addGoalBtn">
-                <i class="fas fa-plus"></i> Add Goal
+                    <i class="fas fa-plus"></i> Add Goal
                 </button>
             </div>
         </div>
@@ -1017,71 +1021,79 @@ function getGoalsContent() {
                     <h3>Goals Overview</h3>
                     <p class="amount">${goals.length} Total</p>
                     <div class="overview-stats">
-                        
-                    </div>
-                </div>
+                        <div class="stat-item">
+                            <span>Completed</span>
+                            <span class="stat-value">${goals.filter(g => g.progress >= 100).length}</span>
             </div>
-        
-        ${goals.length === 0 ? `
-            <div class="empty-state">
-                <div class="empty-icon">
-                    <i class="fas fa-bullseye"></i>
-                </div>
-                <h3 class="empty-title">No goals set</h3>
-                <p class="empty-text">Set financial goals to track your progress</p>
-                <button class="btn btn-primary" id="createFirstGoalBtn">
-                    <i class="fas fa-plus"></i> Create Goal
-                </button>
-            </div>
-        ` : `
-            <div class="goals-grid">
-                ${goals.map(goal => {
-                    const progress = Math.min((goal.current / goal.target) * 100, 100);
-                    const status = progress >= 100 ? 'completed' : progress >= 75 ? 'near-complete' : 'in-progress';
-                    const daysLeft = Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24));
-                    
-                    return `
-                        <div class="goal-card ${status}" data-id="${goal.id}">
-                            <div class="goal-header">
-                                <h3>${goal.name}</h3>
-                    <div class="goal-icon">
-                                    <i class="fas ${getGoalIcon(goal.type)}"></i>
+                        <div class="stat-item">
+                            <span>In Progress</span>
+                            <span class="stat-value">${goals.filter(g => g.progress < 100).length}</span>
                     </div>
-                            </div>
-                        <div class="goal-progress">
-                                <div class="progress-bar">
-                                    <div class="progress" style="width: ${progress}%"></div>
                         </div>
-                                <div class="goal-amounts">
-                                    <span>${formatCurrency(goal.current)} / ${formatCurrency(goal.target)}</span>
-                                    <span class="goal-percentage">${Math.round(progress)}%</span>
+                        </div>
+                    </div>
+        
+            ${goals.length === 0 ? `
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <h3 class="empty-title">No goals set</h3>
+                    <p class="empty-text">Set financial goals to track your progress</p>
+                    <button class="btn btn-primary" id="createFirstGoalBtn">
+                        <i class="fas fa-plus"></i> Create Goal
+                        </button>
+                    </div>
+            ` : `
+                <div class="goals-grid">
+                    ${goals.map(goal => {
+                        const progress = Math.min((goal.current / goal.target) * 100, 100);
+                        const status = progress >= 100 ? 'completed' : progress >= 75 ? 'near-complete' : 'in-progress';
+                        const daysLeft = Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+                        const isDatePassed = daysLeft < 0;
+                        
+                        return `
+                            <div class="goal-card ${status}" data-id="${goal.id}">
+                                <div class="goal-header">
+                                    <h3>${goal.name}</h3>
+                    <div class="goal-icon">
+                                        <i class="fas ${getGoalIcon(goal.type)}"></i>
+                    </div>
+                                </div>
+                        <div class="goal-progress">
+                                    <div class="progress-bar">
+                                        <div class="progress" style="width: ${progress}%"></div>
+                        </div>
+                                    <div class="goal-amounts">
+                                        <span>${formatCurrency(goal.current)} / ${formatCurrency(goal.target)}</span>
+                                        <span class="goal-percentage">${Math.round(progress)}%</span>
                         </div>
                     </div>
                     <div class="goal-details">
-                                <div class="detail-item">
-                                    <i class="fas fa-calendar"></i>
-                                    <span>${daysLeft} days left</span>
+                                    <div class="detail-item">
+                                        <i class="fas fa-calendar"></i>
+                                        <span>${isDatePassed ? 'Date Passed' : `${daysLeft} days left`}</span>
                         </div>
-                                <div class="detail-item">
-                                    <i class="fas fa-chart-line"></i>
-                                    <span>${goal.type}</span>
+                                    <div class="detail-item">
+                                        <i class="fas fa-chart-line"></i>
+                                        <span>${goal.type}</span>
                         </div>
                     </div>
-                            <div class="goal-footer">
+                                <div class="goal-footer">
                     <div class="goal-actions">
-                                    <button class="action-btn edit" data-id="${goal.id}">
-                                        <i class="fas fa-pencil-alt"></i>
-                                    </button>
-                                    <button class="action-btn delete" data-id="${goal.id}">
-                                        <i class="fas fa-trash"></i>
+                                        <button class="action-btn edit" data-id="${goal.id}">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
+                                        <button class="action-btn delete" data-id="${goal.id}">
+                                            <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </div>
             </div>
-                    `;
-                }).join('')}
+                        `;
+                    }).join('')}
                 </div>
-        `}
+            `}
         </div>
     `;
 }
@@ -1100,7 +1112,7 @@ function getGoalIcon(type) {
 // Reports content
 function getReportsContent(transactions = []) {
     const stats = calculateFinancialStats(transactions);
-    
+
     return `
         <div class="page-header">
             <h1>Reports</h1>
@@ -1117,7 +1129,7 @@ function getReportsContent(transactions = []) {
                 </button>
             </div>
         </div>
-        
+
         <div class="reports-container">
             <div class="stats-grid">
                 <div class="stat-card">
@@ -1125,39 +1137,39 @@ function getReportsContent(transactions = []) {
                     <div class="stat-item">
                         <span>Average Income</span>
                         <span>${formatCurrency(stats.income.avg || 0)}</span>
-                    </div>
+                </div>
                     <div class="stat-item">
                         <span>Standard Deviation</span>
                         <span>${formatCurrency(stats.income.stdDev || 0)}</span>
-                    </div>
+                </div>
                     <div class="stat-item">
                         <span>Range</span>
                         <span>${formatCurrency(stats.income.min || 0)} - ${formatCurrency(stats.income.max || 0)}</span>
-                    </div>
-                </div>
-                
+            </div>
+</div>
+
                 <div class="stat-card">
                     <h3>Expense Statistics</h3>
                     <div class="stat-item">
                         <span>Average Expense</span>
                         <span>${formatCurrency(stats.expense.avg || 0)}</span>
-                    </div>
+            </div>
                     <div class="stat-item">
                         <span>Standard Deviation</span>
                         <span>${formatCurrency(stats.expense.stdDev || 0)}</span>
-                    </div>
+        </div>
                     <div class="stat-item">
                         <span>Range</span>
                         <span>${formatCurrency(stats.expense.min || 0)} - ${formatCurrency(stats.expense.max || 0)}</span>
-                    </div>
-                </div>
             </div>
-            
+        </div>
+</div>
+
             <div class="charts-grid">
                 <div class="chart-card">
                     <h3>Net Balance Trend</h3>
                     <canvas id="balanceTrendChart"></canvas>
-                </div>
+            </div>
                 <div class="chart-card">
                     <h3>Expenses by Category</h3>
                     <canvas id="categoryPieChart"></canvas>
@@ -3024,40 +3036,107 @@ function calculateFinancialStats(transactions) {
 }
 
 function setupTransactionsEvents() {
-    const exportBtn = document.getElementById('exportTransactionsBtn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', () => {
+    const addTransactionBtn = document.getElementById('addTransactionBtn');
+    if (addTransactionBtn) {
+        addTransactionBtn.addEventListener('click', () => {
+            editTransactionId = null;
+            document.querySelector('.modal-title').textContent = 'Add Transaction';
+            document.getElementById('saveTransactionBtn').textContent = 'Add Transaction';
+            document.getElementById('transactionForm').reset();
+            document.getElementById('transactionDate').value = new Date().toISOString().split('T')[0];
+            transactionModal.classList.add('active');
+            toggleCustomCategory(); // Initialize custom category visibility
+        });
+    }
+
+    // Event delegation for edit and delete buttons
+    const transactionsList = document.querySelector('.transactions-list');
+    if (transactionsList) {
+        transactionsList.addEventListener('click', (e) => {
+            const target = e.target;
+            const transactionItem = target.closest('.transaction-item');
+            
+            if (!transactionItem) return;
+            
+            const transactionId = parseInt(transactionItem.dataset.id);
             const currentUser = localStorage.getItem('loggedInUser');
             const users = JSON.parse(localStorage.getItem('users') || '{}');
             const transactions = users[currentUser]?.transactions || [];
-            
-            // Create CSV content
-            const headers = ['Date', 'Type', 'Category', 'Amount', 'Description'];
-            const csvContent = [
-                headers.join(','),
-                ...transactions.map(t => [
-                    t.date,
-                    t.type,
-                    t.category,
-                    t.amount,
-                    t.description
-                ].join(','))
-            ].join('\n');
-            
-            // Create and download file
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `transactions-${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showToast('Transactions exported successfully', 'success');
+            const transaction = transactions.find(t => t.id === transactionId);
+
+            if (target.classList.contains('edit-transaction')) {
+                editTransactionId = transactionId;
+                document.querySelector('.modal-title').textContent = 'Edit Transaction';
+                document.getElementById('saveTransactionBtn').textContent = 'Update Transaction';
+                
+                // Populate form fields
+                document.getElementById('transactionName').value = transaction.name || '';
+                document.getElementById('transactionAmount').value = transaction.amount;
+                document.getElementById(transaction.type).checked = true;
+                document.getElementById('transactionCategory').value = ['salary', 'food', 'shopping', 'bills', 'transport', 'entertainment'].includes(transaction.category) ? transaction.category : 'other';
+                if (!['salary', 'food', 'shopping', 'bills', 'transport', 'entertainment'].includes(transaction.category)) {
+                    document.getElementById('customCategory').value = transaction.category;
+                }
+                document.getElementById('transactionDate').value = transaction.date;
+                document.getElementById('transactionNotes').value = transaction.notes || '';
+                
+                transactionModal.classList.add('active');
+                toggleCustomCategory(); // Show/hide custom category field based on selected category
+            }
         });
     }
+}
+
+// Update the form submission handler
+if (transactionForm) {
+    transactionForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const currentUser = localStorage.getItem('loggedInUser');
+        const users = JSON.parse(localStorage.getItem('users') || '{}');
+        const transactions = users[currentUser]?.transactions || [];
+        
+        const selectedCategory = document.getElementById('transactionCategory').value;
+        const customCategoryValue = document.getElementById('customCategory').value.trim();
+        
+        // Validate custom category if "Other" is selected
+        if (selectedCategory === 'other' && !customCategoryValue) {
+            showToast('Please enter a custom category', 'error');
+            document.getElementById('customCategory').focus();
+            return;
+        }
+        
+        const transactionData = {
+            id: editTransactionId || Date.now(),
+            name: document.getElementById('transactionName').value.trim(),
+            amount: parseFloat(document.getElementById('transactionAmount').value),
+            type: document.querySelector('input[name="transactionType"]:checked').value,
+            category: selectedCategory === 'other' ? customCategoryValue : selectedCategory,
+            date: document.getElementById('transactionDate').value,
+            notes: document.getElementById('transactionNotes').value.trim()
+        };
+        
+        if (editTransactionId) {
+            // Update existing transaction
+            const index = transactions.findIndex(t => t.id === editTransactionId);
+            if (index !== -1) {
+                transactions[index] = transactionData;
+            }
+        } else {
+            // Add new transaction
+            transactions.push(transactionData);
+        }
+        
+        users[currentUser] = {
+            ...users[currentUser],
+            transactions
+        };
+        
+        localStorage.setItem('users', JSON.stringify(users));
+        transactionModal.classList.remove('active');
+        loadPage(document.querySelector('.nav-link.active').dataset.page);
+        showToast(`Transaction ${editTransactionId ? 'updated' : 'added'} successfully`, 'success');
+    });
 }
 
 function setupReportsEvents() {
@@ -3291,7 +3370,12 @@ function showGoalModal(goal = null) {
                         <option value="debt" ${goal && goal.type === 'debt' ? 'selected' : ''}>Debt Repayment</option>
                         <option value="investment" ${goal && goal.type === 'investment' ? 'selected' : ''}>Investment</option>
                         <option value="purchase" ${goal && goal.type === 'purchase' ? 'selected' : ''}>Major Purchase</option>
+                        <option value="other" ${goal && !['savings', 'debt', 'investment', 'purchase'].includes(goal.type) ? 'selected' : ''}>Other</option>
                     </select>
+                </div>
+                <div class="form-group" id="customGoalTypeGroup" style="display: none;">
+                    <label>Custom Goal Type</label>
+                    <input type="text" id="customGoalType" class="form-control" value="${goal && !['savings', 'debt', 'investment', 'purchase'].includes(goal.type) ? goal.type : ''}" placeholder="Enter custom goal type">
                 </div>
                 <div class="form-group">
                     <label>Deadline</label>
@@ -3306,6 +3390,24 @@ function showGoalModal(goal = null) {
     `;
     
     document.body.appendChild(modal);
+    
+    // Handle goal type change
+    const typeSelect = modal.querySelector('#goalType');
+    const customTypeGroup = modal.querySelector('#customGoalTypeGroup');
+    const customTypeInput = modal.querySelector('#customGoalType');
+    
+    typeSelect.addEventListener('change', () => {
+        if (typeSelect.value === 'other') {
+            customTypeGroup.style.display = 'block';
+            customTypeInput.required = true;
+        } else {
+            customTypeGroup.style.display = 'none';
+            customTypeInput.required = false;
+        }
+    });
+    
+    // Trigger change event to handle initial state
+    typeSelect.dispatchEvent(new Event('change'));
     
     // Close modal handlers
     const closeModal = () => {
@@ -3328,7 +3430,9 @@ function showGoalModal(goal = null) {
             name: document.getElementById('goalName').value,
             target: parseFloat(document.getElementById('goalTarget').value),
             current: parseFloat(document.getElementById('goalCurrent').value),
-            type: document.getElementById('goalType').value,
+            type: document.getElementById('goalType').value === 'other' 
+                ? document.getElementById('customGoalType').value 
+                : document.getElementById('goalType').value,
             deadline: document.getElementById('goalDeadline').value
         };
         
@@ -3346,7 +3450,6 @@ function showGoalModal(goal = null) {
         localStorage.setItem(`${currentUser}_goals`, JSON.stringify(goals));
         
         closeModal();
-        // Force a complete page refresh to ensure all stats are updated
         loadPage('goals');
         showToast(`Goal ${goal ? 'updated' : 'created'} successfully`, 'success');
     });
@@ -3362,46 +3465,42 @@ function showTransactionModal(transaction = null) {
                 <h2>${transaction ? 'Edit Transaction' : 'Add Transaction'}</h2>
                 <button class="close-modal">&times;</button>
             </div>
-            <form id="transactionForm" class="transaction-form">
+            <form id="transactionForm">
                 <div class="form-group">
-                    <label for="transactionName">Name</label>
-                    <input type="text" id="transactionName" class="form-control" value="${transaction ? transaction.name : ''}" required>
-                </div>
-                <div class="form-group">
-                    <label for="transactionAmount">Amount</label>
-                    <input type="number" id="transactionAmount" class="form-control" value="${transaction ? transaction.amount : ''}" step="0.01" min="0" required>
+                    <label>Amount</label>
+                    <input type="number" id="transactionAmount" class="form-control" value="${transaction ? transaction.amount : ''}" required>
                 </div>
                 <div class="form-group">
                     <label>Type</label>
-                    <div class="radio-group">
-                        <label class="radio-label">
-                            <input type="radio" name="transactionType" value="income" ${transaction && transaction.type === 'income' ? 'checked' : ''}>
-                            <span>Income</span>
-                        </label>
-                        <label class="radio-label">
-                            <input type="radio" name="transactionType" value="expense" ${!transaction || transaction.type === 'expense' ? 'checked' : ''}>
-                            <span>Expense</span>
-                        </label>
-                    </div>
+                    <select id="transactionType" class="form-control" required>
+                        <option value="income" ${transaction && transaction.type === 'income' ? 'selected' : ''}>Income</option>
+                        <option value="expense" ${transaction && transaction.type === 'expense' ? 'selected' : ''}>Expense</option>
+                    </select>
                 </div>
                 <div class="form-group">
-                    <label for="transactionCategory">Category</label>
-                    <select id="transactionCategory" class="form-control" required>
+                    <label>Category</label>
+                    <select id="transactionCategory" class="form-control" required onchange="this.nextElementSibling.style.display = this.value === 'other' ? 'block' : 'none'">
+                        <option value="">Select Category</option>
+                        <option value="salary" ${transaction && transaction.category === 'salary' ? 'selected' : ''}>Salary</option>
                         <option value="food" ${transaction && transaction.category === 'food' ? 'selected' : ''}>Food</option>
                         <option value="shopping" ${transaction && transaction.category === 'shopping' ? 'selected' : ''}>Shopping</option>
                         <option value="bills" ${transaction && transaction.category === 'bills' ? 'selected' : ''}>Bills</option>
                         <option value="transport" ${transaction && transaction.category === 'transport' ? 'selected' : ''}>Transport</option>
                         <option value="entertainment" ${transaction && transaction.category === 'entertainment' ? 'selected' : ''}>Entertainment</option>
-                        <option value="other" ${transaction && transaction.category === 'other' ? 'selected' : ''}>Other</option>
+                        <option value="other" ${transaction && !['salary', 'food', 'shopping', 'bills', 'transport', 'entertainment'].includes(transaction.category) ? 'selected' : ''}>Other</option>
                     </select>
                 </div>
+                <div class="form-group" id="customCategoryGroup" style="display: ${transaction && !['salary', 'food', 'shopping', 'bills', 'transport', 'entertainment'].includes(transaction.category) ? 'block' : 'none'}">
+                    <label>Custom Category</label>
+                    <input type="text" id="customCategory" class="form-control" value="${transaction && !['salary', 'food', 'shopping', 'bills', 'transport', 'entertainment'].includes(transaction.category) ? transaction.category : ''}" placeholder="Enter custom category">
+                </div>
                 <div class="form-group">
-                    <label for="transactionDate">Date</label>
+                    <label>Date</label>
                     <input type="date" id="transactionDate" class="form-control" value="${transaction ? transaction.date : new Date().toISOString().split('T')[0]}" required>
                 </div>
                 <div class="form-group">
-                    <label for="transactionNotes">Notes</label>
-                    <textarea id="transactionNotes" class="form-control" rows="3">${transaction ? transaction.notes || '' : ''}</textarea>
+                    <label>Description</label>
+                    <textarea id="transactionDescription" class="form-control" rows="3">${transaction ? transaction.description : ''}</textarea>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-outline" id="cancelTransaction">Cancel</button>
@@ -3413,6 +3512,32 @@ function showTransactionModal(transaction = null) {
     
     document.body.appendChild(modal);
     
+    // Handle category change
+    const categorySelect = modal.querySelector('#transactionCategory');
+    const customCategoryGroup = modal.querySelector('#customCategoryGroup');
+    const customCategoryInput = modal.querySelector('#customCategory');
+    
+    // Function to toggle custom category input
+    const toggleCustomCategory = () => {
+        if (categorySelect.value === 'other') {
+            customCategoryGroup.style.display = 'block';
+            customCategoryInput.required = true;
+            customCategoryInput.focus();
+        } else {
+            customCategoryGroup.style.display = 'none';
+            customCategoryInput.required = false;
+        }
+    };
+    
+    // Add event listener for category change
+    categorySelect.addEventListener('change', toggleCustomCategory);
+    
+    // Trigger change event to handle initial state
+    if (transaction && !['salary', 'food', 'shopping', 'bills', 'transport', 'entertainment'].includes(transaction.category)) {
+        customCategoryGroup.style.display = 'block';
+        customCategoryInput.required = true;
+    }
+    
     // Close modal handlers
     const closeModal = () => {
         modal.remove();
@@ -3421,13 +3546,6 @@ function showTransactionModal(transaction = null) {
     modal.querySelector('.close-modal').addEventListener('click', closeModal);
     modal.querySelector('#cancelTransaction').addEventListener('click', closeModal);
     
-    // Close modal when clicking outside
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
-    
     // Form submission
     const transactionForm = modal.querySelector('#transactionForm');
     transactionForm.addEventListener('submit', (e) => {
@@ -3435,173 +3553,50 @@ function showTransactionModal(transaction = null) {
         
         const currentUser = localStorage.getItem('loggedInUser');
         const users = JSON.parse(localStorage.getItem('users') || '{}');
-        let transactions = users[currentUser]?.transactions || [];
+        const transactions = users[currentUser]?.transactions || [];
+        
+        // Get the category value
+        const selectedCategory = categorySelect.value;
+        const customCategoryValue = customCategoryInput.value.trim();
+        
+        // Validate custom category if "Other" is selected
+        if (selectedCategory === 'other' && !customCategoryValue) {
+            showToast('Please enter a custom category', 'error');
+            customCategoryInput.focus();
+            return;
+        }
         
         const transactionData = {
             id: transaction ? transaction.id : Date.now(),
-            name: document.getElementById('transactionName').value.trim(),
             amount: parseFloat(document.getElementById('transactionAmount').value),
-            type: document.querySelector('input[name="transactionType"]:checked').value,
-            category: document.getElementById('transactionCategory').value,
+            type: document.getElementById('transactionType').value,
+            category: selectedCategory === 'other' ? customCategoryValue : selectedCategory,
             date: document.getElementById('transactionDate').value,
-            notes: document.getElementById('transactionNotes').value.trim()
+            description: document.getElementById('transactionDescription').value
         };
         
         if (transaction) {
-            // Delete the original transaction
-            transactions = transactions.filter(t => t.id !== transaction.id);
-            // Add the new transaction with the same ID
-            transactions.unshift(transactionData);
+            // Update existing transaction
+            const index = transactions.findIndex(t => t.id === transaction.id);
+            if (index !== -1) {
+                transactions[index] = transactionData;
+            }
         } else {
             // Add new transaction
-            transactions.unshift(transactionData);
+            transactions.push(transactionData);
         }
         
-        users[currentUser].transactions = transactions;
+        users[currentUser] = {
+            ...users[currentUser],
+            transactions
+        };
+        
         localStorage.setItem('users', JSON.stringify(users));
         
         closeModal();
-        loadPage(currentPage);
+        loadPage('transactions');
         showToast(`Transaction ${transaction ? 'updated' : 'added'} successfully`, 'success');
     });
-
-    // Add CSS styles for the modal
-    const style = document.createElement('style');
-    style.textContent = `
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .modal.active {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .modal-content {
-            background: var(--bg-color);
-            border-radius: 8px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transform: translateY(-20px);
-            transition: transform 0.3s ease;
-        }
-        
-        .modal.active .modal-content {
-            transform: translateY(0);
-        }
-        
-        .modal-header {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .modal-header h2 {
-            margin: 0;
-            font-size: 1.5rem;
-            color: var(--text-color);
-        }
-        
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: var(--text-color);
-            padding: 0.5rem;
-        }
-        
-        .transaction-form {
-            padding: 1rem;
-        }
-        
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--text-color);
-        }
-        
-        .form-control {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            background: var(--input-bg);
-            color: var(--text-color);
-        }
-        
-        .radio-group {
-            display: flex;
-            gap: 1rem;
-        }
-        
-        .radio-label {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            cursor: pointer;
-        }
-        
-        .form-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 1rem;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border-color);
-        }
-        
-        .btn {
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-        
-        .btn-primary {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-        }
-        
-        .btn-outline {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-        }
-        
-        .btn:hover {
-            opacity: 0.9;
-        }
-        
-        textarea.form-control {
-            resize: vertical;
-            min-height: 80px;
-        }
-    `;
-    document.head.appendChild(style);
 }
 
 // Function to show budget modal
@@ -3611,34 +3606,69 @@ function showBudgetModal(budget = null) {
     modal.innerHTML = `
         <div class="modal-content">
             <div class="modal-header">
-                <h2>${budget ? 'Edit Budget' : 'Create New Budget'}</h2>
+                <h2>${budget ? 'Edit Budget' : 'Add Budget'}</h2>
                 <button class="close-modal">&times;</button>
             </div>
             <form id="budgetForm">
                 <div class="form-group">
-                    <label for="budgetCategory">Category</label>
+                    <label>Category</label>
                     <select id="budgetCategory" class="form-control" required>
+                        <option value="">Select Category</option>
+                        <option value="salary" ${budget && budget.category === 'salary' ? 'selected' : ''}>Salary</option>
                         <option value="food" ${budget && budget.category === 'food' ? 'selected' : ''}>Food</option>
                         <option value="shopping" ${budget && budget.category === 'shopping' ? 'selected' : ''}>Shopping</option>
                         <option value="bills" ${budget && budget.category === 'bills' ? 'selected' : ''}>Bills</option>
                         <option value="transport" ${budget && budget.category === 'transport' ? 'selected' : ''}>Transport</option>
                         <option value="entertainment" ${budget && budget.category === 'entertainment' ? 'selected' : ''}>Entertainment</option>
-                        <option value="other" ${budget && budget.category === 'other' ? 'selected' : ''}>Other</option>
+                        <option value="other" ${budget && !['salary', 'food', 'shopping', 'bills', 'transport', 'entertainment'].includes(budget.category) ? 'selected' : ''}>Other</option>
                     </select>
                 </div>
+                <div class="form-group" id="customBudgetCategoryGroup" style="display: none;">
+                    <label>Custom Category</label>
+                    <input type="text" id="customBudgetCategory" class="form-control" value="${budget && !['salary', 'food', 'shopping', 'bills', 'transport', 'entertainment'].includes(budget.category) ? budget.category : ''}" placeholder="Enter custom category">
+                </div>
                 <div class="form-group">
-                    <label for="budgetAmount">Monthly Budget Amount</label>
-                    <input type="number" id="budgetAmount" class="form-control" value="${budget ? budget.amount : ''}" required min="0" step="0.01">
+                    <label>Amount</label>
+                    <input type="number" id="budgetAmount" class="form-control" value="${budget ? budget.amount : ''}" required>
+                </div>
+                <div class="form-group">
+                    <label>Period</label>
+                    <select id="budgetPeriod" class="form-control" required>
+                        <option value="monthly" ${budget && budget.period === 'monthly' ? 'selected' : ''}>Monthly</option>
+                        <option value="yearly" ${budget && budget.period === 'yearly' ? 'selected' : ''}>Yearly</option>
+                    </select>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-outline" id="cancelBudget">Cancel</button>
-                    <button type="submit" class="btn btn-primary">${budget ? 'Update Budget' : 'Create Budget'}</button>
+                    <button type="submit" class="btn btn-primary">${budget ? 'Update Budget' : 'Add Budget'}</button>
                 </div>
             </form>
         </div>
     `;
     
     document.body.appendChild(modal);
+    
+    // Handle category change
+    const categorySelect = modal.querySelector('#budgetCategory');
+    const customCategoryGroup = modal.querySelector('#customBudgetCategoryGroup');
+    const customCategoryInput = modal.querySelector('#customBudgetCategory');
+    
+    // Function to toggle custom category input
+    const toggleCustomCategory = () => {
+        if (categorySelect.value === 'other') {
+            customCategoryGroup.style.display = 'block';
+            customCategoryInput.required = true;
+        } else {
+            customCategoryGroup.style.display = 'none';
+            customCategoryInput.required = false;
+        }
+    };
+    
+    // Add event listener for category change
+    categorySelect.addEventListener('change', toggleCustomCategory);
+    
+    // Trigger change event to handle initial state
+    toggleCustomCategory();
     
     // Close modal handlers
     const closeModal = () => {
@@ -3647,13 +3677,6 @@ function showBudgetModal(budget = null) {
     
     modal.querySelector('.close-modal').addEventListener('click', closeModal);
     modal.querySelector('#cancelBudget').addEventListener('click', closeModal);
-    
-    // Close modal when clicking outside
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
     
     // Form submission
     const budgetForm = modal.querySelector('#budgetForm');
@@ -3665,8 +3688,11 @@ function showBudgetModal(budget = null) {
         
         const budgetData = {
             id: budget ? budget.id : Date.now(),
-            category: document.getElementById('budgetCategory').value,
-            amount: parseFloat(document.getElementById('budgetAmount').value)
+            category: document.getElementById('budgetCategory').value === 'other' 
+                ? document.getElementById('customBudgetCategory').value 
+                : document.getElementById('budgetCategory').value,
+            amount: parseFloat(document.getElementById('budgetAmount').value),
+            period: document.getElementById('budgetPeriod').value
         };
         
         if (budget) {
@@ -3684,7 +3710,7 @@ function showBudgetModal(budget = null) {
         
         closeModal();
         loadPage('budgets');
-        showToast(`Budget ${budget ? 'updated' : 'created'} successfully`, 'success');
+        showToast(`Budget ${budget ? 'updated' : 'added'} successfully`, 'success');
     });
 }
 
@@ -3795,3 +3821,19 @@ function setupCalculatorEvents() {
         input.setAttribute('min', '0');
     });
 }
+
+// Function to toggle custom category input
+function toggleCustomCategory() {
+    if (categorySelect.value === 'other') {
+        customCategoryGroup.style.display = 'block';
+        customCategoryInput.required = true;
+        customCategoryInput.focus();
+    } else {
+        customCategoryGroup.style.display = 'none';
+        customCategoryInput.required = false;
+        customCategoryInput.value = '';
+    }
+}
+
+// Add event listener for category change
+categorySelect?.addEventListener('change', toggleCustomCategory);
