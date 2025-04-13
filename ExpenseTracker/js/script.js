@@ -542,31 +542,23 @@ function getDashboardContent(filteredTransactions) {
 // Transactions content
 function getTransactionsContent(transactions = []) {
     return `
-        <div class="header">
-            <h1 class="page-title">Transactions</h1>
+        <div class="page-header">
+            <h1>Transactions</h1>
             <div class="header-actions">
                 <div class="search-bar">
                     <i class="fas fa-search"></i>
                     <input type="text" placeholder="Search transactions..." id="searchTransactions">
                 </div>
-                <div class="transaction-actions">
-                    <button class="btn btn-primary" id="addTransactionBtn">
-                        <i class="fas fa-plus"></i> Add Transaction
-                    </button>
-                </div>
+                <button class="btn btn-primary" id="addTransactionBtn">
+                    <i class="fas fa-plus"></i> Add Transaction
+                </button>
+                <button class="btn btn-secondary" id="exportTransactionsBtn">
+                    <i class="fas fa-file-export"></i> Export
+                </button>
             </div>
         </div>
-
+        
         <div class="transactions-container">
-            <div class="transactions-header">
-                <h2 class="section-title">All Transactions</h2>
-                <div class="transaction-actions">
-                    <button class="btn btn-outline">
-                        <i class="fas fa-download"></i> Export
-                    </button>
-                </div>
-            </div>
-            
             <div class="transaction-filters">
                 <div class="filter-group">
                     <label>Type:</label>
@@ -597,17 +589,12 @@ function getTransactionsContent(transactions = []) {
                 </div>
             </div>
 
-            ${generateTransactionList(transactions)}
-            
-            <div class="pagination">
-                <button class="btn btn-outline" id="prevPageBtn">
-                    <i class="fas fa-chevron-left"></i> Previous
-                </button>
-                <span>Page 1 of 5</span>
-                <button class="btn btn-outline" id="nextPageBtn">
-                    Next <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
+            ${transactions.length === 0 ? `
+                <div class="empty-state">
+                    <i class="fas fa-receipt"></i>
+                    <p>No transactions yet. Add your first transaction to get started.</p>
+                </div>
+            ` : generateTransactionList(transactions)}
         </div>
     `;
 }
@@ -1125,14 +1112,12 @@ function getGoalIcon(type) {
 
 // Reports content
 // Reports content
-function getReportsContent() {
-    const currentUser = localStorage.getItem('loggedInUser');
-    const users = JSON.parse(localStorage.getItem('users') || '{}');
-    const transactions = users[currentUser]?.transactions || [];
-
+function getReportsContent(transactions = []) {
+    const stats = calculateFinancialStats(transactions);
+    
     return `
-        <div class="header">
-            <h1 class="page-title">Reports</h1>
+        <div class="page-header">
+            <h1>Reports</h1>
             <div class="header-actions">
                 <select class="form-control" id="reportPeriod">
                     <option value="30">Last 30 Days</option>
@@ -1141,120 +1126,60 @@ function getReportsContent() {
                     <option value="this-year">This Year</option>
                     <option value="all">All Time</option>
                 </select>
-                <button class="btn btn-outline">
-                    <i class="fas fa-download"></i> Export
+                <button class="btn btn-secondary" id="exportReportBtn">
+                    <i class="fas fa-file-pdf"></i> Export Report
                 </button>
             </div>
         </div>
-
+        
         <div class="reports-container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Income Statistics</h3>
+                    <div class="stat-item">
+                        <span>Average Income</span>
+                        <span>${formatCurrency(stats.income.avg || 0)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Standard Deviation</span>
+                        <span>${formatCurrency(stats.income.stdDev || 0)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Range</span>
+                        <span>${formatCurrency(stats.income.min || 0)} - ${formatCurrency(stats.income.max || 0)}</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>Expense Statistics</h3>
+                    <div class="stat-item">
+                        <span>Average Expense</span>
+                        <span>${formatCurrency(stats.expense.avg || 0)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Standard Deviation</span>
+                        <span>${formatCurrency(stats.expense.stdDev || 0)}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Range</span>
+                        <span>${formatCurrency(stats.expense.min || 0)} - ${formatCurrency(stats.expense.max || 0)}</span>
+                    </div>
+                </div>
+            </div>
             
-
-
-            <!-- Chart Section -->
-<div class="chart-section">
-    <h3>Balance Over Time</h3>
-    <canvas id="balanceTrendChart" height="100"></canvas>
-
-    <h3 style="margin-top: 2rem;">Expenses by Category</h3>
-    <canvas id="categoryPieChart" height="100"></canvas>
-</div>
-
-            <div class="transactions-summary">
-                <h3>Recent Transactions</h3>
-                ${generateTransactionList(transactions.slice(0, 5))}
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>Net Balance Trend</h3>
+                    <canvas id="balanceTrendChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Expenses by Category</h3>
+                    <canvas id="categoryPieChart"></canvas>
+                </div>
             </div>
         </div>
     `;
 }
-/*
-function getReportsContent() {
-    return `
-        <div class="header">
-            <h1 class="page-title">Reports</h1>
-            <div class="header-actions">
-                <button class="btn btn-outline">
-                    <i class="fas fa-download"></i> Export
-                </button>
-                <button class="btn btn-primary">
-                    <i class="fas fa-calendar"></i> Custom Range
-                </button>
-            </div>
-        </div>
-        <div class="chart-section">
-    <h3>Balance Over Time</h3>
-    <canvas id="balanceTrendChart" height="100"></canvas>
-
-    <h3 style="margin-top: 2rem;">Expenses by Category</h3>
-    <canvas id="categoryPieChart" height="100"></canvas>
-</div>
-
-
-        <div class="reports-container">
-            <div class="report-tabs">
-                <button class="report-tab active" data-tab="spending">Spending</button>
-                <button class="report-tab" data-tab="income">Income</button>
-                <button class="report-tab" data-tab="categories">Categories</button>
-                <button class="report-tab" data-tab="trends">Trends</button>
-            </div>
-            
-            <div class="report-content">
-                <div class="report-header">
-                    <h2>Spending Report</h2>
-                    <select class="form-control" id="reportPeriod">
-                        <option value="30">Last 30 Days</option>
-                        <option value="this-month">This Month</option>
-                        <option value="last-month">Last Month</option>
-                        <option value="this-year">This Year</option>
-                    </select>
-                </div>
-                
-                <div class="chart-placeholder">
-                    <canvas id="reportChart"></canvas>
-                </div>
-                
-                <div class="report-details">
-                    <div class="report-summary">
-                        <h3>Summary</h3>
-                        <div class="summary-item">
-                            <span>Total Spending</span>
-                            <span>${formatCurrency(1920.50)}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span>Average Daily</span>
-                            <span>${formatCurrency(64.02)}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span>Transactions</span>
-                            <span>42</span>
-                        </div>
-                    </div>
-                    
-                    <div class="report-categories">
-                        <h3>Top Categories</h3>
-                        <div class="category-item">
-                            <span>Food & Dining</span>
-                            <span>${formatCurrency(625.30)} (32.5%)</span>
-                        </div>
-                        <div class="category-item">
-                            <span>Shopping</span>
-                            <span>${formatCurrency(420.75)} (21.9%)</span>
-                        </div>
-                        <div class="category-item">
-                            <span>Bills</span>
-                            <span>${formatCurrency(375.50)} (19.5%)</span>
-                        </div>
-                        <div class="category-item">
-                            <span>Transportation</span>
-                            <span>${formatCurrency(210.00)} (10.9%)</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}*/
-
 
 function filterByReportPeriod(transactions, period) {
     const now = new Date();
@@ -1440,59 +1365,83 @@ function renderIncomeExpenseChart(transactions) {
 }
 
 function renderCategoryPieChart(transactions) {
-    const ctx = document.getElementById('categoryPieChart')?.getContext('2d');
+    const ctx = document.getElementById('categoryPieChart');
     if (!ctx) return;
 
-    // Calculate expenses by category
+    // Destroy existing chart if it exists
+    if (window.categoryPieChart) {
+        window.categoryPieChart.destroy();
+    }
+
+    // Filter expenses and group by category
+    const expenses = transactions.filter(t => t.type === 'expense');
     const categoryData = {};
-    transactions.forEach(tx => {
-        if (tx.type === 'expense') {
-            categoryData[tx.category] = (categoryData[tx.category] || 0) + tx.amount;
+    
+    expenses.forEach(t => {
+        if (!categoryData[t.category]) {
+            categoryData[t.category] = 0;
         }
+        categoryData[t.category] += t.amount;
     });
 
-    const labels = Object.keys(categoryData);
-    const data = Object.values(categoryData);
+    // Sort categories by amount
+    const sortedCategories = Object.entries(categoryData)
+        .sort(([,a], [,b]) => b - a)
+        .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
 
-    new Chart(ctx, {
+    // Create chart
+    window.categoryPieChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels,
+            labels: Object.keys(sortedCategories).map(cat => 
+                cat.charAt(0).toUpperCase() + cat.slice(1)
+            ),
             datasets: [{
-                data,
+                data: Object.values(sortedCategories),
                 backgroundColor: [
-                    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', 
-                    '#e74a3b', '#858796', '#5a5c69', '#3a3b45'
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0',
+                    '#9966FF',
+                    '#FF9F40'
                 ],
-                hoverBackgroundColor: [
-                    '#2e59d9', '#17a673', '#2c9faf', '#dda20a', 
-                    '#be2617', '#656776', '#42444e', '#24252e'
-                ],
-                hoverBorderColor: "rgba(234, 236, 244, 1)",
+                borderWidth: 1
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 4, // This makes the chart much smaller (50% of previous size)
             plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: (context) => {
-                            const value = context.raw;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = Math.round((value / total) * 100);
-                            return `${context.label}: ${(formatCurrency(value))} (${percentage}%)`;
-                        }
-                    }
-                },
                 legend: {
                     position: 'right',
                     labels: {
-                        usePointStyle: true,
-                        padding: 20
+                        color: getComputedStyle(document.body).getPropertyValue('--text-color'),
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.raw;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `${context.label}: ${formatCurrency(value)} (${percentage}%)`;
+                        }
                     }
                 }
             },
-            cutout: '70%'
+            layout: {
+                padding: {
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0
+                }
+            }
         }
     });
 }
@@ -2526,6 +2475,12 @@ if (filterType && filterCategory && filterDateRange) {
             });
         }
     }
+
+    if (currentPage === 'transactions') {
+        setupTransactionsEvents();
+    } else if (currentPage === 'reports') {
+        setupReportsEvents();
+    }
 }
 
 // 🔍 Live search transactions by any parameter
@@ -3039,94 +2994,150 @@ function getDashboardContent(filteredTransactions) {
 }
 
 function calculateFinancialStats(transactions) {
-    const expenses = transactions.filter(t => t.type === 'expense').map(t => t.amount);
-    const incomes = transactions.filter(t => t.type === 'income').map(t => t.amount);
+    // Initialize default stats structure
+    const defaultStats = {
+        income: { avg: 0, stdDev: 0, min: 0, max: 0 },
+        expense: { avg: 0, stdDev: 0, min: 0, max: 0 }
+    };
+
+    // If no transactions, return default stats
+    if (!transactions || transactions.length === 0) {
+        return defaultStats;
+    }
 
     const calculateStats = (values) => {
-        if (values.length === 0) return { mean: 0, stdDev: 0, min: 0, max: 0 };
-        const mean = values.reduce((a, b) => a + b, 0) / values.length;
-        const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
-        const stdDev = Math.sqrt(variance);
+        if (values.length === 0) return { avg: 0, stdDev: 0, min: 0, max: 0 };
+        
+        const sum = values.reduce((a, b) => a + b, 0);
+        const avg = sum / values.length;
+        const squareDiffs = values.map(value => Math.pow(value - avg, 2));
+        const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / squareDiffs.length;
+        const stdDev = Math.sqrt(avgSquareDiff);
+        
         return {
-            mean,
+            avg,
             stdDev,
             min: Math.min(...values),
             max: Math.max(...values)
         };
     };
 
+    const incomes = transactions
+        .filter(t => t.type === 'income')
+        .map(t => t.amount);
+
+    const expenses = transactions
+        .filter(t => t.type === 'expense')
+        .map(t => t.amount);
+
     return {
-        expenses: calculateStats(expenses),
-        incomes: calculateStats(incomes)
+        income: calculateStats(incomes),
+        expense: calculateStats(expenses)
     };
 }
 
-function getReportsContent(transactions = []) {
-    const stats = calculateFinancialStats(transactions);
-    
-    return `
-        <div class="header">
-            <h1 class="page-title">Reports</h1>
-            <div class="header-actions">
-                <select class="form-control" id="reportPeriod">
-                    <option value="30">Last 30 Days</option>
-                    <option value="this-month">This Month</option>
-                    <option value="last-month">Last Month</option>
-                    <option value="this-year">This Year</option>
-                    <option value="all">All Time</option>
-                </select>
-                <button class="btn btn-outline">
-                    <i class="fas fa-download"></i> Export
-                </button>
-            </div>
-        </div>
+function setupTransactionsEvents() {
+    const exportBtn = document.getElementById('exportTransactionsBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            const currentUser = localStorage.getItem('loggedInUser');
+            const users = JSON.parse(localStorage.getItem('users') || '{}');
+            const transactions = users[currentUser]?.transactions || [];
+            
+            // Create CSV content
+            const headers = ['Date', 'Type', 'Category', 'Amount', 'Description'];
+            const csvContent = [
+                headers.join(','),
+                ...transactions.map(t => [
+                    t.date,
+                    t.type,
+                    t.category,
+                    t.amount,
+                    t.description
+                ].join(','))
+            ].join('\n');
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `transactions-${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast('Transactions exported successfully', 'success');
+        });
+    }
+}
 
-        <div class="reports-container">
-            <div class="chart-section">
-                <h3>Balance Over Time</h3>
-                <canvas id="balanceTrendChart" height="100"></canvas>
-
-                <h3 style="margin-top: 2rem;">Expenses by Category</h3>
-                <div style="width: 50%; margin: 0 auto;">
-                    <canvas id="categoryPieChart" height="100"></canvas>
-                </div>
-            </div>
-
-            <div class="statistics-section">
-                <div class="stat-card">
-                    <h3>Income Statistics</h3>
-                    <div class="stat-item">
-                        <span>Average Income:</span>
-                        <span>${formatCurrency(stats.incomes.mean)}</span>
-                    </div>
-                    <div class="stat-item">
-                        <span>Standard Deviation:</span>
-                        <span>${formatCurrency(stats.incomes.stdDev)}</span>
-                    </div>
-                    <div class="stat-item">
-                        <span>Range:</span>
-                        <span>${formatCurrency(stats.incomes.min)} - ${formatCurrency(stats.incomes.max)}</span>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <h3>Expense Statistics</h3>
-                    <div class="stat-item">
-                        <span>Average Expense:</span>
-                        <span>${formatCurrency(stats.expenses.mean)}</span>
-                    </div>
-                    <div class="stat-item">
-                        <span>Standard Deviation:</span>
-                        <span>${formatCurrency(stats.expenses.stdDev)}</span>
-                    </div>
-                    <div class="stat-item">
-                        <span>Range:</span>
-                        <span>${formatCurrency(stats.expenses.min)} - ${formatCurrency(stats.expenses.max)}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+function setupReportsEvents() {
+    const exportBtn = document.getElementById('exportReportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', async () => {
+            const currentUser = localStorage.getItem('loggedInUser');
+            const users = JSON.parse(localStorage.getItem('users') || '{}');
+            const transactions = users[currentUser]?.transactions || [];
+            
+            // Calculate statistics
+            const stats = calculateFinancialStats(transactions);
+            
+            // Create PDF content
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Add title and user info
+            doc.setFontSize(20);
+            doc.text('Financial Report', 20, 20);
+            
+            doc.setFontSize(12);
+            doc.text(`Generated for: ${currentUser}`, 20, 30);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 20, 37);
+            
+            // Add income statistics
+            doc.setFontSize(16);
+            doc.text('Income Statistics', 20, 52);
+            doc.setFontSize(12);
+            doc.text(`Average Income: ${formatCurrency(stats.income.avg).replace('¹', '')}`, 20, 62);
+            doc.text(`Standard Deviation: ${formatCurrency(stats.income.stdDev).replace('¹', '')}`, 20, 72);
+            doc.text(`Range: ${formatCurrency(stats.income.min).replace('¹', '')} - ${formatCurrency(stats.income.max).replace('¹', '')}`, 20, 82);
+            
+            // Add expense statistics
+            doc.setFontSize(16);
+            doc.text('Expense Statistics', 20, 97);
+            doc.setFontSize(12);
+            doc.text(`Average Expense: ${formatCurrency(stats.expense.avg).replace('¹', '')}`, 20, 107);
+            doc.text(`Standard Deviation: ${formatCurrency(stats.expense.stdDev).replace('¹', '')}`, 20, 117);
+            doc.text(`Range: ${formatCurrency(stats.expense.min).replace('¹', '')} - ${formatCurrency(stats.expense.max).replace('¹', '')}`, 20, 127);
+            
+            // Add charts
+            const balanceTrendChart = document.getElementById('balanceTrendChart');
+            const categoryPieChart = document.getElementById('categoryPieChart');
+            
+            if (balanceTrendChart) {
+                const balanceChartImage = balanceTrendChart.toDataURL('image/png');
+                doc.addPage();
+                doc.setFontSize(16);
+                doc.text('Net Balance Trend', 20, 20);
+                doc.addImage(balanceChartImage, 'PNG', 20, 30, 170, 100);
+            }
+            
+            if (categoryPieChart) {
+                const pieChartImage = categoryPieChart.toDataURL('image/png');
+                doc.addPage();
+                doc.setFontSize(16);
+                doc.text('Expenses by Category', 20, 20);
+                doc.addImage(pieChartImage, 'PNG', 20, 30, 170, 100);
+            }
+            
+            // Save the PDF
+            doc.save(`financial-report-${currentUser}-${new Date().toISOString().split('T')[0]}.pdf`);
+            
+            showToast('Report exported successfully', 'success');
+        });
+    }
 }
 
 // Settings event handlers
