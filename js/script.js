@@ -3699,3 +3699,111 @@ function showBudgetModal(budget = null) {
         showToast(`Budget ${budget ? 'updated' : 'created'} successfully`, 'success');
     });
 }
+
+function setupCalculatorEvents() {
+    // EMI Calculator
+    const emiForm = document.getElementById('emiCalculatorForm');
+    if (emiForm) {
+        emiForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const loanAmount = parseFloat(document.getElementById('loanAmount').value);
+            const interestRate = parseFloat(document.getElementById('interestRate').value);
+            const loanTerm = parseInt(document.getElementById('loanTerm').value);
+            
+            if (loanAmount > 0 && interestRate > 0 && loanTerm > 0) {
+                const monthlyRate = interestRate / 12 / 100;
+                const numberOfPayments = loanTerm * 12;
+                const emi = loanAmount * monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments) / (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
+                
+                document.getElementById('emiResult').innerHTML = `
+                    <h4>Monthly EMI</h4>
+                    <p>Amount: ${formatCurrency(emi)}</p>
+                    <p>Total Interest: ${formatCurrency(emi * numberOfPayments - loanAmount)}</p>
+                    <p>Total Payment: ${formatCurrency(emi * numberOfPayments)}</p>
+                `;
+            } else {
+                showToast('Please enter valid positive numbers', 'error');
+            }
+        });
+    }
+    
+    // Tax Calculator
+    const taxForm = document.getElementById('taxCalculatorForm');
+    if (taxForm) {
+        taxForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const annualIncome = parseFloat(document.getElementById('annualIncome').value);
+            const taxRate = parseFloat(document.getElementById('taxRate').value);
+            
+            if (annualIncome > 0 && taxRate > 0) {
+                const taxAmount = annualIncome * (taxRate / 100);
+                const takeHomePay = annualIncome - taxAmount;
+                
+                document.getElementById('taxResult').innerHTML = `
+                    <h4>Tax Calculation</h4>
+                    <p>Annual Income: ${formatCurrency(annualIncome)}</p>
+                    <p>Tax Rate: ${taxRate}%</p>
+                    <p>Estimated Tax: ${formatCurrency(taxAmount)}</p>
+                    <p>Take Home Pay: ${formatCurrency(takeHomePay)}</p>
+                `;
+            } else {
+                showToast('Please enter valid positive numbers', 'error');
+            }
+        });
+    }
+    
+    // Savings Goal Calculator
+    const savingsForm = document.getElementById('savingsCalculatorForm');
+    if (savingsForm) {
+        savingsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const targetAmount = parseFloat(document.getElementById('targetAmount').value);
+            const currentAmount = parseFloat(document.getElementById('currentAmount').value);
+            const timeFrame = parseInt(document.getElementById('timeFrame').value);
+            const interestRate = parseFloat(document.getElementById('savingsInterestRate').value);
+            
+            if (targetAmount > 0 && currentAmount >= 0 && timeFrame > 0 && interestRate >= 0) {
+                const remainingAmount = targetAmount - currentAmount;
+                const monthlyRate = interestRate / 12 / 100;
+                const numberOfMonths = timeFrame * 12;
+                
+                let monthlySavings;
+                if (interestRate > 0) {
+                    monthlySavings = remainingAmount * monthlyRate * Math.pow(1 + monthlyRate, numberOfMonths) / (Math.pow(1 + monthlyRate, numberOfMonths) - 1);
+                } else {
+                    monthlySavings = remainingAmount / numberOfMonths;
+                }
+                
+                document.getElementById('savingsResult').innerHTML = `
+                    <h4>Savings Plan</h4>
+                    <p>Monthly Savings Needed: ${formatCurrency(monthlySavings)}</p>
+                    <p>Total Savings: ${formatCurrency(monthlySavings * numberOfMonths + currentAmount)}</p>
+                    <p>Interest Earned: ${formatCurrency(monthlySavings * numberOfMonths + currentAmount - targetAmount)}</p>
+                `;
+            } else {
+                showToast('Please enter valid positive numbers', 'error');
+            }
+        });
+    }
+    
+    // Add input validation to prevent 'e' and negative values
+    const numberInputs = document.querySelectorAll('input[type="number"]');
+    numberInputs.forEach(input => {
+        // Prevent 'e' character
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'e' || e.key === 'E') {
+                e.preventDefault();
+            }
+        });
+        
+        // Ensure positive values
+        input.addEventListener('input', (e) => {
+            if (parseFloat(e.target.value) < 0) {
+                e.target.value = 0;
+            }
+        });
+        
+        // Set min attribute to 0
+        input.setAttribute('min', '0');
+    });
+}
