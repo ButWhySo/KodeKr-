@@ -556,9 +556,7 @@ function getTransactionsContent(transactions = []) {
                     <button class="btn btn-primary" id="addTransactionBtn">
                         <i class="fas fa-plus"></i> Add Transaction
                     </button>
-                <button class="btn btn-secondary" id="exportTransactionsBtn">
-                    <i class="fas fa-file-export"></i> Export
-                    </button>
+                
                 </div>
             </div>
             
